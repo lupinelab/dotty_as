@@ -33,6 +33,7 @@ class Dotty_as(QWidget):
         capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
         capture.set(cv2.CAP_PROP_FPS, 30)
         capture.set(cv2.CAP_PROP_AUTOFOCUS, 1)
+        capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
         ret, frame = capture.read()
         if ret:
             greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
