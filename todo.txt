@@ -1,6 +1,5 @@
-1. Add change resolution setting (any resolution & scaling factor [ie.4k?])
+1. Add resolution setting (any resolution & scaling factor [ie.4k?])
 2. Make compatible with Windows virtual camera devices
-3. Set virtual camera devices linux/Windows
+3. Set virtual camera devices Linux/Windows
 4. Build for Linux/Windows
 5. OBS plugin branch?
-6. 
