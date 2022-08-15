@@ -30,5 +30,4 @@ while True:
             y += 1
 
     camera.schedule_frame(dotty_frame)
-    cv2.imshow('video gray', greyFrame)
     time.sleep(1/60.0)
