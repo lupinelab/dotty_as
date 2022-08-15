@@ -51,7 +51,7 @@ class Dotty_as(QWidget):
 
     def drawDot(self, qp, x, y, width, height):
         dot = QPainterPath()
-        dot.addRoundedRect(x, y, width, height, 2, 2)
+        dot.addRect(x, y, width, height)
         qp.fillPath(dot, QColor(13, 188, 121))
 
 
