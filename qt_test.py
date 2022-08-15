@@ -75,7 +75,7 @@ class App(QWidget):
         path = QPainterPath()
         dot_colour = QColor(13, 188, 121)
         path.addRoundedRect(x, y, width, height, 2, 2)
-        painter.fillPath(path, QColor(13, 188, 121))
+        painter.fillPath(path, dot_colour)
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
