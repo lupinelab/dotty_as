@@ -9,7 +9,6 @@ capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
 while True:
     capture.set(cv2.CAP_PROP_FPS, 60)
     capture.set(cv2.CAP_PROP_AUTOFOCUS, 1)
-    capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
     ret, frame = capture.read()
     dotty_frame = np.zeros((960, 1280, 3), dtype=np.uint8)
     if ret:
