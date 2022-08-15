@@ -19,23 +19,25 @@ class Dotty_As():
         self.preview()
         self.setting_window()
         self.dotify()
-        print(cv2.getTrackbarPos('Contrast','dotty_as - Settings'))
         
 
     def webcam_capture(self):
         self.capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
+        self.capture_width=self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.capture_height=self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
         self.capture.set(cv2.CAP_PROP_FPS, 60)
         self.capture.set(cv2.CAP_PROP_AUTOFOCUS, 1)
 
 
     def preview(self):
-        preview_window = cv2.namedWindow('dotty_as - Preview')
+        preview_window = cv2.namedWindow('dotty_as - Preview', cv2.WINDOW_GUI_NORMAL)
+        cv2.resizeWindow('dotty_as - Preview', int(self.capture_width), int(self.capture_height))
         cv2.setMouseCallback('dotty_as - Preview', self.open_settings)
 
 
     def setting_window(self):  
-        setting_window = cv2.namedWindow('dotty_as - Settings', cv2.WINDOW_AUTOSIZE)
-        cv2.resizeWindow('dotty_as - Settings', 800, 200)
+        setting_window = cv2.namedWindow('dotty_as - Settings', cv2.WINDOW_GUI_NORMAL)
+        cv2.resizeWindow('dotty_as - Settings', 600, 100)
         cv2.createTrackbar('Virtual Camera','dotty_as - Settings', self.virtualcam_enabled, 1, self.set_virtualcam_enabled)
         cv2.createTrackbar('Contrast','dotty_as - Settings', self.contrast, 255, self.set_contrast)
         cv2.createTrackbar('Brightness','dotty_as - Settings', self.brightness, 255, self.set_brightness)
@@ -45,8 +47,8 @@ class Dotty_As():
         cv2.createTrackbar('Dot Type: Rectangle/Circle','dotty_as - Settings', self.shape, 1, self.set_shape)
         cv2.createTrackbar('Outline/Solid','dotty_as - Settings', self.filled, 1, self.set_filled)
 
-    def set_virtualcam_enabled(self, x):
-        self.virtualcam_enabled = x
+    def set_virtualcam_enabled(self, e):
+        self.virtualcam_enabled = e
 
     def set_brightness(self, b):
         self.brightness= b
@@ -72,7 +74,7 @@ class Dotty_As():
 
     def open_settings(self, event, x, y, flags, param):
         if event:
-            cv2.destroyWindow('dotty_as - Settings')
+            #cv2.destroyWindow('dotty_as - Settings')
             self.setting_window()
 
 
@@ -109,20 +111,24 @@ class Dotty_As():
                 if 'virtualcam' in locals():
                     pass
                 else:
-                    virtualcam = pyfakewebcam.FakeWebcam('/dev/video2', 1280, 960) # JW find suitable /dev/videoX device
-            dottyFrame = np.zeros((960, 1280, 3), dtype=np.uint8)
+                    virtualcam = pyfakewebcam.FakeWebcam( # JW find suitable /dev/videoX device
+                        '/dev/video2', 
+                        int(self.capture_width*2), 
+                        int(self.capture_height*2)
+                        ) 
+            dottyFrame = np.zeros((int(self.capture_height*2), int(self.capture_width*2), 3), dtype=np.uint8)
             self.capture.set(cv2.CAP_PROP_CONTRAST, self.contrast)
             self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.brightness)
             colour = (self.red, self.green, self.blue)
             ret, frame = self.capture.read() 
             if ret:
                 greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                dim = (128, 96)
+                dim = ((int(self.capture_width/10)*2), (int(self.capture_height/10)*2))
                 downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
                 x = 0
                 y = 0
-                while y < 96:
-                    while x < 128:
+                while y < dim[1]:
+                    while x < dim[0]:
                         if self.shape == 0:
                             self.rects(y, x, downFrame, dottyFrame, colour, self.filled)
                         elif self.shape == 1:
@@ -143,3 +149,4 @@ class Dotty_As():
 
 if __name__ == '__main__':
     dotty_as = Dotty_As()
+    
