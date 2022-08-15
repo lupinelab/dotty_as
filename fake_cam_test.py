@@ -21,9 +21,11 @@ while True:
         y = 0
         while y < 96:
             while x < 128:
-                coords = ((x*10)+5, (y*10)+5)
+                rect_size = (255-downFrame[y, x])//32
+                rect_start = ((x*10)+(5-int((rect_size)/2)), int(y*10)+(5-int((rect_size)/2)))
+                rect_end = ((x*10)+(rect_size), (y*10)+(rect_size))
                 colour = (13, 188, 121)
-                cv2.circle(dotty_frame, coords, (255-downFrame[y, x])//32, colour, -1)
+                cv2.rectangle(dotty_frame, rect_start, rect_end, colour, -1)
                 x += 1
             x = 0
             y += 1
