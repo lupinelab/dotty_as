@@ -109,7 +109,7 @@ class Dotty_As():
                 if 'virtualcam' in locals():
                     pass
                 else:
-                    virtualcam = pyfakewebcam.FakeWebcam('/dev/video2', 1280, 960)
+                    virtualcam = pyfakewebcam.FakeWebcam('/dev/video2', 1280, 960) # JW find suitable /dev/videoX device
             dottyFrame = np.zeros((960, 1280, 3), dtype=np.uint8)
             self.capture.set(cv2.CAP_PROP_CONTRAST, self.contrast)
             self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.brightness)
