@@ -88,7 +88,7 @@ class Dotty_As():
 
     def open_settings(self, event, x, y, flags, param):
         if event:
-            self.setting_window()
+            self.settings()
 
 
     def rects(self, y, x, frame, canvas, colour, filled):
