@@ -2,8 +2,7 @@ import time
 import pyfakewebcam
 import numpy as np
 import cv2
-import sys
-
+import subprocess
 
 class Dotty_As():
     def __init__(self):
@@ -15,9 +14,10 @@ class Dotty_As():
         self.blue = 121
         self.shape = 0
         self.filled = 1
+        self.virtualcam_device = self.get_virtual_cams()[0]
         self.webcam_capture()
         self.preview()
-        self.setting_window()
+        self.settings()
         self.dotify()
         
 
@@ -30,15 +30,18 @@ class Dotty_As():
 
 
     def preview(self):
-        preview_window = cv2.namedWindow('dotty_as - Preview', cv2.WINDOW_GUI_NORMAL)
+        preview = cv2.namedWindow('dotty_as - Preview', cv2.WINDOW_GUI_NORMAL)
         cv2.resizeWindow('dotty_as - Preview', int(self.capture_width), int(self.capture_height))
         cv2.setMouseCallback('dotty_as - Preview', self.open_settings)
 
+    def get_virtual_cams(self):
+        virtual_cams = subprocess.run(["v4l2-ctl --list-devices | grep -A1 v4l2 | grep /dev/video"], capture_output=True, text=True, shell=True).stdout.strip().replace("\t", "").split("\n")
+        return virtual_cams
 
-    def setting_window(self):  
-        setting_window = cv2.namedWindow('dotty_as - Settings', cv2.WINDOW_GUI_NORMAL)
+    def settings(self):  
+        settings = cv2.namedWindow('dotty_as - Settings', cv2.WINDOW_GUI_EXPANDED)
         cv2.resizeWindow('dotty_as - Settings', 600, 100)
-        cv2.createTrackbar('Virtual Camera','dotty_as - Settings', self.virtualcam_enabled, 1, self.set_virtualcam_enabled)
+        cv2.createTrackbar('Virtual Camera On/Off','dotty_as - Settings', self.virtualcam_enabled, 1, self.set_virtualcam_enabled)
         cv2.createTrackbar('Contrast','dotty_as - Settings', self.contrast, 255, self.set_contrast)
         cv2.createTrackbar('Brightness','dotty_as - Settings', self.brightness, 255, self.set_brightness)
         cv2.createTrackbar('R','dotty_as - Settings', self.red, 255, self.set_red)
@@ -46,6 +49,8 @@ class Dotty_As():
         cv2.createTrackbar('B','dotty_as - Settings', self.blue, 255, self.set_blue)
         cv2.createTrackbar('Dot Type: Rectangle/Circle','dotty_as - Settings', self.shape, 1, self.set_shape)
         cv2.createTrackbar('Outline/Solid','dotty_as - Settings', self.filled, 1, self.set_filled)
+        for vcam in self.get_virtual_cams():
+            cv2.createButton(f"{vcam}", self.set_virtualcam_device, vcam, cv2.QT_PUSH_BUTTON|cv2.QT_NEW_BUTTONBAR, -1)
 
     def set_virtualcam_enabled(self, e):
         self.virtualcam_enabled = e
@@ -71,10 +76,12 @@ class Dotty_As():
     def set_filled(self, f):
         self.filled = f
 
+    def set_virtualcam_device(self, state, vcam):
+        self.virtualcam_device = vcam
+
 
     def open_settings(self, event, x, y, flags, param):
         if event:
-            #cv2.destroyWindow('dotty_as - Settings')
             self.setting_window()
 
 
@@ -109,13 +116,15 @@ class Dotty_As():
         while True:
             if self.virtualcam_enabled == 1:
                 if 'virtualcam' in locals():
-                    pass
+                    if current_device == self.virtualcam_device: # JW figure out how to swap device
+                       pass
                 else:
                     virtualcam = pyfakewebcam.FakeWebcam( # JW find suitable /dev/videoX device
-                        '/dev/video2', 
+                        self.virtualcam_device, 
                         int(self.capture_width*2), 
                         int(self.capture_height*2)
-                        ) 
+                        )
+                    current_device = self.virtualcam_device
             dottyFrame = np.zeros((int(self.capture_height*2), int(self.capture_width*2), 3), dtype=np.uint8)
             self.capture.set(cv2.CAP_PROP_CONTRAST, self.contrast)
             self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.brightness)
