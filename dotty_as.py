@@ -14,6 +14,7 @@ class Dotty_As():
         self.blue = 121
         self.shape = 0
         self.filled = 1
+        self.virtual_camera = None
         self.virtualcam_device = self.get_virtual_cams()[0]
         self.webcam_capture()
         self.preview()
@@ -54,6 +55,11 @@ class Dotty_As():
 
     def set_virtualcam_enabled(self, e):
         self.virtualcam_enabled = e
+        self.virtualcam = pyfakewebcam.FakeWebcam(
+                        self.virtualcam_device, 
+                        int(self.capture_width*2), 
+                        int(self.capture_height*2)
+                        )
 
     def set_brightness(self, b):
         self.brightness= b
@@ -114,17 +120,6 @@ class Dotty_As():
 
     def dotify(self):
         while True:
-            if self.virtualcam_enabled == 1:
-                if 'virtualcam' in locals():
-                    if current_device == self.virtualcam_device: # JW figure out how to swap device
-                       pass
-                else:
-                    virtualcam = pyfakewebcam.FakeWebcam( # JW find suitable /dev/videoX device
-                        self.virtualcam_device, 
-                        int(self.capture_width*2), 
-                        int(self.capture_height*2)
-                        )
-                    current_device = self.virtualcam_device
             dottyFrame = np.zeros((int(self.capture_height*2), int(self.capture_width*2), 3), dtype=np.uint8)
             self.capture.set(cv2.CAP_PROP_CONTRAST, self.contrast)
             self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.brightness)
@@ -147,7 +142,7 @@ class Dotty_As():
                     y += 1
             cv2.imshow('dotty_as - Preview', cv2.cvtColor(dottyFrame, cv2.COLOR_BGR2RGB))
             if self.virtualcam_enabled == 1:
-                virtualcam.schedule_frame(dottyFrame)
+                self.virtualcam.schedule_frame(dottyFrame)
                 time.sleep(1/60.0)
             key = cv2.waitKey(1)
             if key == 27:
