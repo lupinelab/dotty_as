@@ -5,7 +5,7 @@ import cv2
 import sys
 import subprocess
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QButtonGroup, QRadioButton, QGroupBox, QComboBox, QSlider
+from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QRadioButton, QGroupBox, QComboBox, QSlider
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 
