@@ -124,7 +124,7 @@ class Dotty_As(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("dotty_as")
-        self.capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
+        self.capture = cv2.VideoCapture(0)
         self.settings = {
             "cap_width": 1280,
             "cap_height": 720,
