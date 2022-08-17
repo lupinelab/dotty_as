@@ -28,11 +28,12 @@ class VideoThread(QThread):
         self.green = video_settings["green"]
         self.blue = video_settings["blue"]
         self.discochaos = video_settings["discochaos"]
-        self.shape = video_settings["shape"]
+        self.dottype = video_settings["dottype"]
         self.fill = video_settings["fill"]
         self.virtualcam_enabled = virtualcam_settings["virtualcam_enabled"]
         self.virtualcam_device = virtualcam_settings["virtualcam_device"]
         self.virtualcam = None
+        self.ascii_symbols = (".", ",", "-", "~", ":", ";", "=", "!", "*", "#", "$", "@")
         self.set_virtualcam_status()
     
     @pyqtSlot(dict)
@@ -43,7 +44,7 @@ class VideoThread(QThread):
         self.green = settings["green"]
         self.blue = settings["blue"]
         self.discochaos = settings["discochaos"]
-        self.shape = settings["shape"]
+        self.dottype = settings["dottype"]
         self.fill = settings["fill"]
     
     @pyqtSlot(dict)
@@ -88,6 +89,13 @@ class VideoThread(QThread):
                 cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
             cv2.circle(canvas, centre, radius, colour, -1, cv2.LINE_AA)
 
+
+    def ascii(self, y, x, frame, canvas, colour):
+        symbol = self.ascii_symbols[(frame[y, x])//22]
+        bottom_left = ((x*10)+2, (y*10)+8)
+        effect = cv2.putText(canvas, symbol, bottom_left, cv2.FONT_HERSHEY_PLAIN, .6, colour, 1, cv2.LINE_AA)
+
+
     def run(self):
         while self._run_flag:
             dottyFrame = np.zeros((int(self.capture_height), int(self.capture_width), 3), dtype=np.uint8)
@@ -107,10 +115,12 @@ class VideoThread(QThread):
                     while x < dim[0]:
                         if self.discochaos == "Chaos":
                              colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
-                        if self.shape == "Square":
+                        if self.dottype == "Square":
                             self.square(y, x, downFrame, dottyFrame, colour, self.fill)
-                        elif self.shape == "Circle":
+                        elif self.dottype == "Circle":
                             self.circle(y, x, downFrame, dottyFrame, colour, self.fill)
+                        elif self.dottype == "ASCII":
+                            self.ascii(y, x, downFrame, dottyFrame, colour)
                         x += 1
                     x = 0
                     y += 1
@@ -141,7 +151,7 @@ class Dotty_As(QMainWindow):
             "green": 188,
             "blue": 121,
             "discochaos": None,
-            "shape": "Square",
+            "dottype": "Square",
             "fill": "Outline",
             }
         self.virtualcam_settings = {
@@ -226,8 +236,8 @@ class Dotty_As_Settings(QWidget):
         self.virtualcamtoggle_off.setChecked(True)
         self.virtualcamtoggle_layout.addWidget(self.virtualcamtoggle_on)
         self.virtualcamtoggle_layout.addWidget(self.virtualcamtoggle_off)
-        self.virtualcamtoggle_off.toggled.connect(lambda:self.set_virtualcam_toggle(self.virtualcamtoggle_off))
-        self.virtualcamtoggle_on.toggled.connect(lambda:self.set_virtualcam_toggle(self.virtualcam_toggle_on))
+        self.virtualcamtoggle_off.toggled.connect(lambda:self.set_virtualcamtoggle(self.virtualcamtoggle_off))
+        self.virtualcamtoggle_on.toggled.connect(lambda:self.set_virtualcamtoggle(self.virtualcamtoggle_on))
     
     def virtualcamselect(self):
         self.virtualcamselect_groupbox = QGroupBox("Select Virtual Camera")
@@ -337,17 +347,20 @@ class Dotty_As_Settings(QWidget):
         self.dottype_layout = QVBoxLayout()
         self.dottype_groupbox.setLayout(self.dottype_layout)
         # Shape
-        self.dotshape_groupbox = QGroupBox("Shape")
+        self.dotshape_groupbox = QGroupBox("Type")
         self.dottype_layout.addWidget(self.dotshape_groupbox)
         self.dotshape_layout = QHBoxLayout()
         self.dotshape_groupbox.setLayout(self.dotshape_layout)
         self.dotshape_square = QRadioButton("Square")
         self.dotshape_circle = QRadioButton("Circle")
+        self.dotshape_ascii = QRadioButton("ASCII")
         self.dotshape_square.setChecked(True)
         self.dotshape_layout.addWidget(self.dotshape_square)
         self.dotshape_layout.addWidget(self.dotshape_circle)
+        self.dotshape_layout.addWidget(self.dotshape_ascii)
         self.dotshape_square.toggled.connect(lambda:self.set_dotshape(self.dotshape_square))
         self.dotshape_circle.toggled.connect(lambda:self.set_dotshape(self.dotshape_circle))
+        self.dotshape_ascii.toggled.connect(lambda:self.set_dotshape(self.dotshape_ascii))
         # Fill/Outline
         self.dotfill_groupbox = QGroupBox("Fill")
         self.dottype_layout.addWidget(self.dotfill_groupbox)
@@ -361,7 +374,7 @@ class Dotty_As_Settings(QWidget):
         self.dotfill_filled.toggled.connect(lambda:self.set_dotfill(self.dotfill_filled))
         self.dotfill_outline.toggled.connect(lambda:self.set_dotfill(self.dotfill_outline))
 
-    def set_virtualcam_toggle(self, button):
+    def set_virtualcamtoggle(self, button):
         if button.text() == "On":
             dotty_as.virtualcam_settings["virtualcam_enabled"] = 1
         if button.text() == "Off":
@@ -426,7 +439,11 @@ class Dotty_As_Settings(QWidget):
         dotty_as.update_settings()
 
     def set_dotshape(self, button):
-        dotty_as.settings["shape"] = button.text()
+        dotty_as.settings["dottype"] = button.text()
+        if button.text() == "ASCII":
+            self.dotfill_groupbox.setChecked(False)
+        if button.text() != "ASCII":
+            self.dotfill_groupbox.setChecked(True)
         dotty_as.update_settings()
     
     def set_dotfill(self, button):
