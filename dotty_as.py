@@ -14,8 +14,6 @@ class VideoThread(QThread):
     def __init__(self, capture, video_settings, virtualcam_settings):
         super().__init__()
         self._run_flag = True
-        # self.video_settings = settings
-        # self.cam_settings = virtualcam_settings
         self.capture = capture
         self.capture.set(cv2.CAP_PROP_FPS, 60)
         self.capture.set(cv2.CAP_PROP_AUTOFOCUS, 1)
