@@ -11,25 +11,27 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
-    def __init__(self, capture, settings, virtualcam_settings):
+    def __init__(self, capture, video_settings, virtualcam_settings):
         super().__init__()
         self._run_flag = True
-        self.video_settings = settings
-        self.cam_settings = virtualcam_settings
+        # self.video_settings = settings
+        # self.cam_settings = virtualcam_settings
         self.capture = capture
         self.capture.set(cv2.CAP_PROP_FPS, 60)
         self.capture.set(cv2.CAP_PROP_AUTOFOCUS, 1)
-        self.capture_width=self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.capture_height=self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        self.brightness = self.video_settings["brightness"]
-        self.contrast = self.video_settings["contrast"]
-        self.red = self.video_settings["red"]
-        self.green = self.video_settings["green"]
-        self.blue = self.video_settings["blue"]
-        self.shape = self.video_settings["shape"]
-        self.fill = self.video_settings["fill"]
-        self.virtualcam_enabled = self.cam_settings["virtualcam_enabled"]
-        self.virtualcam_device = self.cam_settings["virtualcam_device"]
+        self.capture_width = video_settings["cap_width"]
+        self.capture_height = video_settings["cap_height"]
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.capture_width)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.capture_height)
+        self.brightness = video_settings["brightness"]
+        self.contrast = video_settings["contrast"]
+        self.red = video_settings["red"]
+        self.green = video_settings["green"]
+        self.blue = video_settings["blue"]
+        self.shape = video_settings["shape"]
+        self.fill = video_settings["fill"]
+        self.virtualcam_enabled = virtualcam_settings["virtualcam_enabled"]
+        self.virtualcam_device = virtualcam_settings["virtualcam_device"]
         self.virtualcam = None
         self.set_virtualcam_status()
     
@@ -76,13 +78,13 @@ class VideoThread(QThread):
                 rect_start = ((x*10)+4, (y*10)+4)
                 rect_end = ((x*10)+4, (y*10)+4)
                 cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
-            cv2.circle(canvas, centre, radius, colour, 1, cv2.FILLED)
+            cv2.circle(canvas, centre, radius, colour, 1, cv2.LINE_AA)
         elif fill == "Filled":
             if radius == 1:
                 rect_start = ((x*10)+4, (y*10)+4)
                 rect_end = ((x*10)+4, (y*10)+4)
                 cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
-            cv2.circle(canvas, centre, radius, colour, -1, cv2.FILLED)
+            cv2.circle(canvas, centre, radius, colour, -1, cv2.LINE_AA)
 
     def run(self):
         while self._run_flag:
@@ -125,6 +127,8 @@ class Dotty_As(QMainWindow):
         self.setWindowTitle("dotty_as")
         self.capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
         self.settings = {
+            "cap_width": 640,
+            "cap_height": 360,
             "brightness": 127,
             "contrast": 127,
             "red": 13,
@@ -137,19 +141,19 @@ class Dotty_As(QMainWindow):
             "virtualcam_enabled": 0, 
             "virtualcam_device": str(self.get_virtual_cams()[0])
             }
-        self.thread = VideoThread(capture=self.capture, settings=self.settings, virtualcam_settings=self.virtualcam_settings)
+        self.thread = VideoThread(capture=self.capture, video_settings=self.settings, virtualcam_settings=self.virtualcam_settings)
         self.update_settings_signal.connect(self.thread.update_image_settings)
         self.update_virtualcam_signal.connect(self.thread.update_virtualcam_settings)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
-        self.disply_width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.display_height = int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.resize(self.disply_width, self.display_height)
-        self.label = QLabel(self)
-        self.label.resize(self.disply_width, self.display_height)
-        self.label.mousePressEvent = self.show_settings
+        self.resize(
+            int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            )
+        self.preview = QLabel(self)
+        self.preview.mousePressEvent = self.show_settings
         self.layout = QVBoxLayout()
-        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.preview)
         self.settings_window = Dotty_As_Settings()
         self.settings_window.show()
 
@@ -161,6 +165,7 @@ class Dotty_As(QMainWindow):
 
 
     def show_settings(self, event):
+        self.settings_window.resize(400, 600)
         self.settings_window.show()
 
     def update_settings(self):
@@ -173,14 +178,15 @@ class Dotty_As(QMainWindow):
     def update_image(self, cv_frame):
         """Updates the image_label with a new opencv image"""
         qt_frame = self.convert_cv_qt(cv_frame)
-        self.label.setPixmap(qt_frame)
+        self.preview.resize(self.width(), self.height())
+        self.preview.setPixmap(qt_frame)
     
     def convert_cv_qt(self, cv_frame):
         """Convert from an opencv image to QPixmap"""
         h, w, ch = cv_frame.shape
         bytes_per_line = ch * w
         convert_to_Qt_format = QtGui.QImage(cv_frame.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
+        p = convert_to_Qt_format.scaled(self.width(), self.height(), Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
         
 
@@ -192,8 +198,7 @@ class Dotty_As_Settings(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("dotty_as - Settings")
-        # self.setting_layouts()
-        # self.setting_labels()
+        self.resize(400, 0)
         self.mainlayout = QVBoxLayout()
         self.setLayout(self.mainlayout)
         self.virtualcamtoggle()
@@ -341,7 +346,7 @@ class Dotty_As_Settings(QWidget):
         dotty_as.update_virtualcam_settings()
 
     def set_brightness(self):
-        self.brightnessvalue.setText(str(self.contrastslider.value()))
+        self.brightnessvalue.setText(str(self.brightnessslider.value()))
         dotty_as.settings["brightness"] = self.brightnessslider.value()
         dotty_as.update_settings()
 
