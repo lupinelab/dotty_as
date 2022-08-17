@@ -54,8 +54,8 @@ class VideoThread(QThread):
         if self.virtualcam_enabled == 1:
             self.virtualcam = pyfakewebcam.FakeWebcam(
                         self.virtualcam_device, 
-                        int(self.capture_width*2), 
-                        int(self.capture_height*2)
+                        int(self.capture_width), 
+                        int(self.capture_height)
                         )
 
     def rects(self, y, x, frame, canvas, colour, fill):
@@ -86,14 +86,14 @@ class VideoThread(QThread):
 
     def run(self):
         while self._run_flag:
-            dottyFrame = np.zeros((int(self.capture_height*2), int(self.capture_width*2), 3), dtype=np.uint8)
+            dottyFrame = np.zeros((int(self.capture_height), int(self.capture_width), 3), dtype=np.uint8)
             self.capture.set(cv2.CAP_PROP_CONTRAST, self.contrast)
             self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.brightness)
             colour = (self.red, self.green, self.blue)
             ret, frame = self.capture.read() 
             if ret:
                 greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                dim = ((int(self.capture_width/10)*2), (int(self.capture_height/10)*2))
+                dim = ((int(self.capture_width/10)), (int(self.capture_height/10)))
                 downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
                 x = 0
                 y = 0
@@ -125,8 +125,8 @@ class Dotty_As(QMainWindow):
         self.setWindowTitle("dotty_as")
         self.capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
         self.settings = {
-            "cap_width": 640,
-            "cap_height": 360,
+            "cap_width": 1280,
+            "cap_height": 720,
             "brightness": 127,
             "contrast": 127,
             "red": 13,
