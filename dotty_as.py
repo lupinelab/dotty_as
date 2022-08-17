@@ -1,5 +1,5 @@
 import time
-import pyfakewebcam
+import pyvirtualcam
 import numpy as np
 import cv2
 import sys
@@ -52,10 +52,11 @@ class VideoThread(QThread):
 
     def set_virtualcam_status(self):
         if self.virtualcam_enabled == 1:
-            self.virtualcam = pyfakewebcam.FakeWebcam(
-                        self.virtualcam_device, 
+            self.virtualcam = pyvirtualcam.Camera(
                         int(self.capture_width), 
-                        int(self.capture_height)
+                        int(self.capture_height),
+                        fps=self.capture.get(cv2.CAP_PROP_FPS),
+                        device=self.virtualcam_device
                         )
 
     def rects(self, y, x, frame, canvas, colour, fill):
@@ -107,8 +108,8 @@ class VideoThread(QThread):
                     x = 0
                     y += 1
             if self.virtualcam_enabled == 1:
-                self.virtualcam.schedule_frame(dottyFrame)
-                time.sleep(1/60.0)
+                self.virtualcam.send(dottyFrame)
+                self.virtualcam.sleep_until_next_frame()
             self.change_pixmap_signal.emit(dottyFrame)
         self.capture.release()
 

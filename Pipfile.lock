@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "a06e78097de80b3dc0ea5c963279cebd26454f5ab6f5c93b9092f6269fb36df2"
+            "sha256": "1ce04f85f18e89026e127d8c6d50ddc3aec3a66f0da0687254442249b3285c64"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -63,13 +63,6 @@
             "index": "pypi",
             "version": "==4.6.0.66"
         },
-        "pyfakewebcam": {
-            "hashes": [
-                "sha256:2ad8ceada6605d8ba6ba76e087edf20bfce22d544fc410013067d7ce347d5694"
-            ],
-            "index": "pypi",
-            "version": "==0.1.0"
-        },
         "pyqt5": {
             "hashes": [
                 "sha256:08694f0a4c7d4f3d36b2311b1920e6283240ad3b7c09b515e08262e195dcdf37",
@@ -112,6 +105,24 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==12.11.0"
+        },
+        "pyvirtualcam": {
+            "hashes": [
+                "sha256:000047eaedf46eed01ebd8dfdf772d99bb9a6b6a0e256b8ba725cfe43b086341",
+                "sha256:035f7881629cb673d3e9167c2b801bb125e38673b711e0b4d2f6106f854d8ccd",
+                "sha256:08fd19714ff35200c1b609c03d3cfec26e09fbf3ec259b19dcc1b0b2e8084357",
+                "sha256:196a021b9afd15de7b2c9eed6f1444d123897d3f014af567ee561c27caaadbf8",
+                "sha256:206a9b10435f6e2ebc7ee0856b88fd67f1a9d3fd97463c698f57fd282e584785",
+                "sha256:2fd524e7139581151480f6ba8688e615148ac471f0716dbf3337042e4b6a0669",
+                "sha256:51239623a6874d3c3cc5f170788c948ab41e6f4e254bb9dc3ab0fed60ba84584",
+                "sha256:a5a6088f15b6080438794b59ba21e6be949061b5848de504f91ccf444716c486",
+                "sha256:bdb366187e317d08f0ca73c0a30ede76db3c90f421da95af7e7be76b404df255",
+                "sha256:c01d83700cd074c9195f79d8664e86c3afa8cd4895d163d2021215bcfcf3d2a2",
+                "sha256:c47cb64f810255134cbdd16134df162fea2cfabcdafd53131d438932b70a0f24",
+                "sha256:eab7ce52105973e02725d278f12a12360d2b335165609dcb7d55a70ce19802a0"
+            ],
+            "index": "pypi",
+            "version": "==0.9.1"
         }
     },
     "develop": {}

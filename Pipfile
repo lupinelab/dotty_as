@@ -4,9 +4,9 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pyfakewebcam = "*"
 pyqt5 = "*"
 opencv-python-headless = "*"
+pyvirtualcam = "*"
 
 [dev-packages]
 
