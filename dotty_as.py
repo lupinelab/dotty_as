@@ -3,6 +3,7 @@ import pyvirtualcam
 import numpy as np
 import cv2
 import sys
+import random
 import subprocess
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QRadioButton, QGroupBox, QComboBox, QSlider
@@ -26,6 +27,7 @@ class VideoThread(QThread):
         self.red = video_settings["red"]
         self.green = video_settings["green"]
         self.blue = video_settings["blue"]
+        self.discochaos = video_settings["discochaos"]
         self.shape = video_settings["shape"]
         self.fill = video_settings["fill"]
         self.virtualcam_enabled = virtualcam_settings["virtualcam_enabled"]
@@ -40,6 +42,7 @@ class VideoThread(QThread):
         self.red = settings["red"]
         self.green = settings["green"]
         self.blue = settings["blue"]
+        self.discochaos = settings["discochaos"]
         self.shape = settings["shape"]
         self.fill = settings["fill"]
     
@@ -59,7 +62,7 @@ class VideoThread(QThread):
                         device=self.virtualcam_device
                         )
 
-    def rects(self, y, x, frame, canvas, colour, fill):
+    def square(self, y, x, frame, canvas, colour, fill):
         rect_size = (frame[y, x])//32
         rect_start = ((x*10)+2, (y*10)+2)
         rect_end = ((x*10)+(rect_size), (y*10)+(rect_size))
@@ -69,7 +72,7 @@ class VideoThread(QThread):
             effect = cv2.rectangle(canvas, rect_start, rect_end, colour, -1)
 
 
-    def circs(self, y, x, frame, canvas, colour, fill):
+    def circle(self, y, x, frame, canvas, colour, fill):
         radius = int(((frame[y, x])//32)/2)
         centre = ((x*10)+4, (y*10)+4)
         if fill == "Outline":
@@ -91,6 +94,8 @@ class VideoThread(QThread):
             self.capture.set(cv2.CAP_PROP_CONTRAST, self.contrast)
             self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.brightness)
             colour = (self.red, self.green, self.blue)
+            if self.discochaos == "Disco":
+                colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
             ret, frame = self.capture.read() 
             if ret:
                 greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -100,10 +105,12 @@ class VideoThread(QThread):
                 y = 0
                 while y < dim[1]:
                     while x < dim[0]:
+                        if self.discochaos == "Chaos":
+                             colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
                         if self.shape == "Square":
-                            self.rects(y, x, downFrame, dottyFrame, colour, self.fill)
+                            self.square(y, x, downFrame, dottyFrame, colour, self.fill)
                         elif self.shape == "Circle":
-                            self.circs(y, x, downFrame, dottyFrame, colour, self.fill)
+                            self.circle(y, x, downFrame, dottyFrame, colour, self.fill)
                         x += 1
                     x = 0
                     y += 1
@@ -133,6 +140,7 @@ class Dotty_As(QMainWindow):
             "red": 13,
             "green": 188,
             "blue": 121,
+            "discochaos": None,
             "shape": "Square",
             "fill": "Outline",
             }
@@ -205,6 +213,7 @@ class Dotty_As_Settings(QWidget):
         self.brightness()
         self.contrast()
         self.colour()
+        self.discochaos()
         self.dottype()
 
     def virtualcamtoggle(self):
@@ -217,8 +226,8 @@ class Dotty_As_Settings(QWidget):
         self.virtualcamtoggle_off.setChecked(True)
         self.virtualcamtoggle_layout.addWidget(self.virtualcamtoggle_on)
         self.virtualcamtoggle_layout.addWidget(self.virtualcamtoggle_off)
-        self.virtualcamtoggle_off.toggled.connect(lambda:self.set_virtualcamtoggle(self.virtualcamtoggle_off))
-        self.virtualcamtoggle_on.toggled.connect(lambda:self.set_virtualcamtoggle(self.virtualcamtoggle_on))
+        self.virtualcamtoggle_off.toggled.connect(lambda:self.set_virtualcam_toggle(self.virtualcamtoggle_off))
+        self.virtualcamtoggle_on.toggled.connect(lambda:self.set_virtualcam_toggle(self.virtualcam_toggle_on))
     
     def virtualcamselect(self):
         self.virtualcamselect_groupbox = QGroupBox("Select Virtual Camera")
@@ -260,9 +269,12 @@ class Dotty_As_Settings(QWidget):
 
     def colour(self):
         self.colourslider_groupbox = QGroupBox("Colour")
+        self.colourslider_groupbox.setCheckable(True)
+        self.colourslider_groupbox.setChecked(True)
         self.mainlayout.addWidget(self.colourslider_groupbox)
         self.colourslider_layout = QVBoxLayout()
         self.colourslider_groupbox.setLayout(self.colourslider_layout)
+        self.colourslider_groupbox.toggled.connect(lambda:self.set_discochaos_checkbox(self.colourslider_groupbox))
         # Red
         self.redslider_groupbox = QGroupBox("Red")
         self.colourslider_layout.addWidget(self.redslider_groupbox)
@@ -303,6 +315,22 @@ class Dotty_As_Settings(QWidget):
         self.blueslider.setValue(121)
         self.blueslider.sliderMoved.connect(self.set_blue)
 
+    def discochaos(self):      
+        self.discochaos_groupbox = QGroupBox("Disco/Chaos")
+        self.discochaos_groupbox.setCheckable(True)
+        self.discochaos_groupbox.setChecked(False)
+        self.mainlayout.addWidget(self.discochaos_groupbox)
+        self.discochaos_layout = QHBoxLayout()
+        self.discochaos_groupbox.setLayout(self.discochaos_layout)
+        self.discochaos_disco = QRadioButton("Disco")
+        self.discochaos_chaos = QRadioButton("Chaos")
+        self.discochaos_disco.setChecked(True)
+        self.discochaos_layout.addWidget(self.discochaos_disco)
+        self.discochaos_layout.addWidget(self.discochaos_chaos)
+        self.discochaos_groupbox.toggled.connect(lambda:self.set_colour_checkbox(self.discochaos_groupbox))
+        self.discochaos_disco.toggled.connect(lambda:self.set_discochaos(self.discochaos_disco))
+        self.discochaos_chaos.toggled.connect(lambda:self.set_discochaos(self.discochaos_chaos))
+
     def dottype(self):
         self.dottype_groupbox = QGroupBox("Dot Type")
         self.mainlayout.addWidget(self.dottype_groupbox)
@@ -333,7 +361,7 @@ class Dotty_As_Settings(QWidget):
         self.dotfill_filled.toggled.connect(lambda:self.set_dotfill(self.dotfill_filled))
         self.dotfill_outline.toggled.connect(lambda:self.set_dotfill(self.dotfill_outline))
 
-    def set_virtualcamtoggle(self, button):
+    def set_virtualcam_toggle(self, button):
         if button.text() == "On":
             dotty_as.virtualcam_settings["virtualcam_enabled"] = 1
         if button.text() == "Off":
@@ -367,6 +395,34 @@ class Dotty_As_Settings(QWidget):
     def set_blue(self):
         self.bluevalue.setText(str(self.blueslider.value()))
         dotty_as.settings["blue"] = self.blueslider.value()
+        dotty_as.update_settings()
+
+    def set_discochaos_checkbox(self, checkbox):
+        if checkbox.isChecked():
+            self.discochaos_groupbox.setChecked(False)
+            dotty_as.settings["discochaos"] = None
+        if checkbox.isChecked() == False:
+            self.discochaos_groupbox.setChecked(True)
+            if self.discochaos_chaos.isChecked():
+                dotty_as.settings["discochaos"] = self.discochaos_chaos.text()
+            if self.discochaos_disco.isChecked():
+                dotty_as.settings["discochaos"] = self.discochaos_disco.text()
+        dotty_as.update_settings()
+
+    def set_colour_checkbox(self, checkbox):
+        if checkbox.isChecked():
+            self.colourslider_groupbox.setChecked(False)
+            if self.discochaos_chaos.isChecked():
+                dotty_as.settings["discochaos"] = self.discochaos_chaos.text()
+            if self.discochaos_disco.isChecked():
+                dotty_as.settings["discochaos"] = self.discochaos_disco.text()
+        if checkbox.isChecked() == False:
+            dotty_as.settings["discochaos"] = None
+            self.colourslider_groupbox.setChecked(True)
+        dotty_as.update_settings()
+
+    def set_discochaos(self, button):
+        dotty_as.settings["discochaos"] = button.text()
         dotty_as.update_settings()
 
     def set_dotshape(self, button):

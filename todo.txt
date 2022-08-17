@@ -2,3 +2,5 @@
 2. Make compatible with Windows (virtual camera devices & webcams)
 4. Build for Linux/Windows
 5. OBS plugin branch?
+6. Disco and Chaos
+7. ASCII version
