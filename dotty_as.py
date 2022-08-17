@@ -62,6 +62,8 @@ class VideoThread(QThread):
                         fps=self.capture.get(cv2.CAP_PROP_FPS),
                         device=self.virtualcam_device
                         )
+        elif self.virtualcam_enabled == 0:
+            del self.virtualcam
 
     def square(self, y, x, frame, canvas, colour, fill):
         rect_size = (frame[y, x])//32
@@ -144,7 +146,7 @@ class Dotty_As(QMainWindow):
         self.capture = cv2.VideoCapture(0)
         self.settings = {
             "cap_width": 1280,
-            "cap_height": 720,
+            "cap_height": 960,
             "brightness": 127,
             "contrast": 127,
             "red": 13,
@@ -218,36 +220,34 @@ class Dotty_As_Settings(QWidget):
         self.resize(400, 0)
         self.mainlayout = QVBoxLayout()
         self.setLayout(self.mainlayout)
-        self.virtualcamtoggle()
-        self.virtualcamselect()
+        self.virtualcam()
         self.brightness()
         self.contrast()
         self.colour()
         self.discochaos()
         self.dottype()
 
-    def virtualcamtoggle(self):
-        self.virtualcamtoggle_groupbox = QGroupBox("Virtual Camera")
-        self.mainlayout.addWidget(self.virtualcamtoggle_groupbox)
+    def virtualcam(self):
+        self.virtualcam_groupbox = QGroupBox("Virtual Camera")
+        self.mainlayout.addWidget(self.virtualcam_groupbox)
+        self.virtualcam_layout = QVBoxLayout()
+        self.virtualcam_groupbox.setLayout(self.virtualcam_layout)
+        # Device
+        self.virtualcamselect_combobox = QComboBox()
+        self.virtualcamselect_combobox.addItems(self.get_virtual_cams())
+        self.virtualcam_layout.addWidget(self.virtualcamselect_combobox)
+        self.virtualcamselect_combobox.activated[str].connect(self.set_virtualcamselect)     
+        # On/Off
         self.virtualcamtoggle_layout = QHBoxLayout()
-        self.virtualcamtoggle_groupbox.setLayout(self.virtualcamtoggle_layout)
+        self.virtualcam_layout.addLayout(self.virtualcamtoggle_layout)
         self.virtualcamtoggle_on = QRadioButton("On")
         self.virtualcamtoggle_off = QRadioButton("Off")
         self.virtualcamtoggle_off.setChecked(True)
         self.virtualcamtoggle_layout.addWidget(self.virtualcamtoggle_on)
         self.virtualcamtoggle_layout.addWidget(self.virtualcamtoggle_off)
-        self.virtualcamtoggle_off.toggled.connect(lambda:self.set_virtualcamtoggle(self.virtualcamtoggle_off))
-        self.virtualcamtoggle_on.toggled.connect(lambda:self.set_virtualcamtoggle(self.virtualcamtoggle_on))
+        self.virtualcamtoggle_off.clicked.connect(lambda:self.set_virtualcamtoggle(self.virtualcamtoggle_off))
+        self.virtualcamtoggle_on.clicked.connect(lambda:self.set_virtualcamtoggle(self.virtualcamtoggle_on))
     
-    def virtualcamselect(self):
-        self.virtualcamselect_groupbox = QGroupBox("Select Virtual Camera")
-        self.mainlayout.addWidget(self.virtualcamselect_groupbox)
-        self.virtualcamselect_layout = QHBoxLayout()
-        self.virtualcamselect_groupbox.setLayout(self.virtualcamselect_layout)      
-        self.virtualcamselect_combobox = QComboBox()
-        self.virtualcamselect_combobox.addItems(self.get_virtual_cams())
-        self.virtualcamselect_layout.addWidget(self.virtualcamselect_combobox)
-        self.virtualcamselect_combobox.activated[str].connect(self.set_virtualcamselect)
 
     def brightness(self):
         self.brightnessslider_groupbox = QGroupBox("Brightness")
@@ -338,8 +338,8 @@ class Dotty_As_Settings(QWidget):
         self.discochaos_layout.addWidget(self.discochaos_disco)
         self.discochaos_layout.addWidget(self.discochaos_chaos)
         self.discochaos_groupbox.toggled.connect(lambda:self.set_colour_checkbox(self.discochaos_groupbox))
-        self.discochaos_disco.toggled.connect(lambda:self.set_discochaos(self.discochaos_disco))
-        self.discochaos_chaos.toggled.connect(lambda:self.set_discochaos(self.discochaos_chaos))
+        self.discochaos_disco.clicked.connect(lambda:self.set_discochaos(self.discochaos_disco))
+        self.discochaos_chaos.clicked.connect(lambda:self.set_discochaos(self.discochaos_chaos))
 
     def dottype(self):
         self.dottype_groupbox = QGroupBox("Dot Type")
@@ -358,9 +358,9 @@ class Dotty_As_Settings(QWidget):
         self.dotshape_layout.addWidget(self.dotshape_square)
         self.dotshape_layout.addWidget(self.dotshape_circle)
         self.dotshape_layout.addWidget(self.dotshape_ascii)
-        self.dotshape_square.toggled.connect(lambda:self.set_dotshape(self.dotshape_square))
-        self.dotshape_circle.toggled.connect(lambda:self.set_dotshape(self.dotshape_circle))
-        self.dotshape_ascii.toggled.connect(lambda:self.set_dotshape(self.dotshape_ascii))
+        self.dotshape_square.clicked.connect(lambda:self.set_dotshape(self.dotshape_square))
+        self.dotshape_circle.clicked.connect(lambda:self.set_dotshape(self.dotshape_circle))
+        self.dotshape_ascii.clicked.connect(lambda:self.set_dotshape(self.dotshape_ascii))
         # Fill/Outline
         self.dotfill_groupbox = QGroupBox("Fill")
         self.dottype_layout.addWidget(self.dotfill_groupbox)
@@ -371,8 +371,8 @@ class Dotty_As_Settings(QWidget):
         self.dotfill_outline.setChecked(True)
         self.dotfill_layout.addWidget(self.dotfill_filled)
         self.dotfill_layout.addWidget(self.dotfill_outline)
-        self.dotfill_filled.toggled.connect(lambda:self.set_dotfill(self.dotfill_filled))
-        self.dotfill_outline.toggled.connect(lambda:self.set_dotfill(self.dotfill_outline))
+        self.dotfill_filled.clicked.connect(lambda:self.set_dotfill(self.dotfill_filled))
+        self.dotfill_outline.clicked.connect(lambda:self.set_dotfill(self.dotfill_outline))
 
     def set_virtualcamtoggle(self, button):
         if button.text() == "On":
