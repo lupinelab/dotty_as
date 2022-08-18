@@ -8,12 +8,31 @@ import subprocess
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QRadioButton, QGroupBox, QComboBox, QSlider, QLineEdit, QPushButton
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QObject, QThreadPool, QRunnable
 
-class VideoThread(QThread):
+class WorkerSignals(QObject):
+    update_settings_signal = pyqtSignal(dict)
+    update_virtualcam_signal = pyqtSignal(dict)
+    update_resolution_signal = pyqtSignal(dict)
     change_pixmap_signal = pyqtSignal(np.ndarray)
+
+class VideoThread(QRunnable):
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+
+
+
+
+
     def __init__(self, capture, video_settings, virtualcam_settings):
         super().__init__()
+
         self._run_flag = True
         self.capture = capture
         self.capture.set(cv2.CAP_PROP_FPS, 60)
@@ -111,7 +130,7 @@ class VideoThread(QThread):
         bottom_left = ((x*10)+2, (y*10)+8)
         effect = cv2.putText(canvas, symbol, bottom_left, cv2.FONT_HERSHEY_PLAIN, .6, colour, 1, cv2.LINE_AA)
 
-
+    @pyqtSlot()
     def run(self):
         while self._run_flag:
             dottyFrame = np.zeros((int(self.capture_height), int(self.capture_width), 3), dtype=np.uint8)
@@ -143,7 +162,7 @@ class VideoThread(QThread):
             if self.virtualcam_enabled == 1:
                 self.virtualcam.send(dottyFrame)
                 self.virtualcam.sleep_until_next_frame()
-            self.change_pixmap_signal.emit(dottyFrame)
+            self.signals.change_pixmap_signal.emit(dottyFrame)
         self.capture.release()
 
     def stop(self):
@@ -152,11 +171,9 @@ class VideoThread(QThread):
         self.wait()
 
 class Dotty_As(QMainWindow):
-    update_settings_signal = pyqtSignal(dict)
-    update_virtualcam_signal = pyqtSignal(dict)
-    update_resolution_signal = pyqtSignal(dict)
     def __init__(self):
         super().__init__()
+        self.signals = WorkerSignals()
         self.setWindowTitle("dotty_as")
         self.capture = cv2.VideoCapture(0)
         self.settings = {
@@ -175,24 +192,31 @@ class Dotty_As(QMainWindow):
             "virtualcam_enabled": 0, 
             "virtualcam_device": str(self.get_virtual_cams()[0])
             }
-        self.thread = VideoThread(capture=self.capture, video_settings=self.settings, virtualcam_settings=self.virtualcam_settings)
-        self.update_settings_signal.connect(self.thread.update_image_settings)
-        self.update_virtualcam_signal.connect(self.thread.update_virtualcam_settings)
-        self.update_resolution_signal.connect(self.thread.update_resolution)
-        self.thread.change_pixmap_signal.connect(self.update_image)
-        self.thread.start()
+        # self.thread = VideoThread(capture=self.capture, video_settings=self.settings, virtualcam_settings=self.virtualcam_settings)
+        self.signals.change_pixmap_signal.connect(self.update_image)
+        self.threadpool = QThreadPool()
+        self.start_dotify()
+        # self.thread.start()
         self.resize_preview()
         self.preview = QLabel(self)
         self.preview.mousePressEvent = self.show_settings
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.preview)
+        self.show()
         self.settings_window = Dotty_As_Settings()
         self.init_settings_values()
         self.settings_window.show()
 
+
+    def start_dotify(self):
+        dotify = VideoThread(capture=self.capture, video_settings=self.settings, virtualcam_settings=self.virtualcam_settings)
+        dotify.signals.update_settings_signal.connect(dotify.update_image_settings)
+        dotify.signals.update_virtualcam_signal.connect(dotify.update_virtualcam_settings)
+        dotify.signals.update_resolution_signal.connect(dotify.update_resolution)
+        self.threadpool.start(dotify)
+
     def closeEvent(self, event):
         self.settings_window.close()
-        self.thread.stop()
         event.accept()
 
     def resize_preview(self):
@@ -512,7 +536,6 @@ class Dotty_As_Settings(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     dotty_as = Dotty_As()
-    dotty_as.show()
     sys.exit(app.exec_())
     
     
