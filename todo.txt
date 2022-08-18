@@ -1,4 +1,4 @@
-1. Add resolution setting
+1. get camara controls 
 2. Make compatible with Windows (virtual camera devices- Test?!)
 4. Build for Linux/Windows
 5. OBS plugin branch?
