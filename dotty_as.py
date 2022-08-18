@@ -58,18 +58,26 @@ class VideoThread(QThread):
     def update_resolution(self, resolution):
         self.capture_width = resolution["width"]
         self.capture_height = resolution["height"]
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.capture_width)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.capture_height)
 
 
     def set_virtualcam_status(self):
         if self.virtualcam_enabled == 1:
-            self.virtualcam = pyvirtualcam.Camera(
+            try:
+                self.virtualcam = pyvirtualcam.Camera(
                         int(self.capture_width), 
                         int(self.capture_height),
                         fps=self.capture.get(cv2.CAP_PROP_FPS),
                         device=self.virtualcam_device
                         )
+            except RuntimeError:
+                self.virtualcam_enabled = 0
         elif self.virtualcam_enabled == 0:
-            del self.virtualcam
+            try:
+                del self.virtualcam
+            except AttributeError:
+                pass
 
     def square(self, y, x, frame, canvas, colour, fill):
         rect_size = (frame[y, x])//32
