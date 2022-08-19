@@ -151,7 +151,7 @@ class Dotty_As(QMainWindow):
             }
         self.threadpool = QThreadPool()
         self.threadpool.setExpiryTimeout(100)
-        self.start_worker()
+        self.start_dotifying()
         self.resize_window()
         self.preview = QLabel(self)
         self.preview.mousePressEvent = self.show_settings
@@ -167,10 +167,10 @@ class Dotty_As(QMainWindow):
         self.dotify.stop()
         self.threadpool.waitForDone()
         self.resolution = new_res
-        self.start_worker()
+        self.start_dotifying()
         self.resize_window()
 
-    def start_worker(self):
+    def start_dotifying(self):
         self.dotify = VideoThread(run_flag=self.dotify_run_flag, virtualcam=self.virtualcam, resolution=self.resolution, video_settings=self.settings, virtualcam_settings=self.virtualcam_settings)
         self.dotify.setAutoDelete(True)
         self.dotify.signals.change_pixmap_signal.connect(self.update_image)
