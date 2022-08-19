@@ -167,8 +167,6 @@ class Dotty_As(QMainWindow):
         self.dotify.stop()
         self.threadpool.waitForDone()
         self.resolution = new_res
-        # dotty_as.capture.set(cv2.CAP_PROP_FRAME_WIDTH, int(self.width_input.text()))
-        # dotty_as.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, int(self.height_input.text()))
         self.start_worker()
         self.resize_preview()
 
@@ -201,6 +199,8 @@ class Dotty_As(QMainWindow):
     def show_settings(self, event):
         self.settings_window.resize(400, 600)
         self.settings_window.show()
+        self.settings_window.activateWindow()
+
 
 
     @pyqtSlot(np.ndarray)
