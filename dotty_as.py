@@ -418,8 +418,10 @@ class Dotty_As_Settings(QWidget):
     
     def set_virtualcamtoggle(self, button):
         if button.text() == "On":
+            self.resolution_groupbox.setEnabled(False)
             dotty_as.virtualcam_settings["virtualcam_enabled"] = 1
         if button.text() == "Off":
+            self.resolution_groupbox.setEnabled(True)
             dotty_as.virtualcam_settings["virtualcam_enabled"] = 0
 
     def set_virtualcamselect(self):
@@ -473,9 +475,9 @@ class Dotty_As_Settings(QWidget):
     def set_dotshape(self, button):
         dotty_as.settings["dottype"] = button.text()
         if button.text() == "ASCII":
-            self.dotfill_groupbox.setChecked(False)
+            self.dotfill_groupbox.setEnabled(False)
         if button.text() != "ASCII":
-            self.dotfill_groupbox.setChecked(True)
+            self.dotfill_groupbox.setEnabled(True)
     
     def set_dotfill(self, button):
         dotty_as.settings["fill"] = button.text()
