@@ -131,10 +131,12 @@ class Dotty_As(QMainWindow):
         self.setWindowTitle("dotty_as")
         self.dotify_run_flag = True
         self.virtualcam = None
+        self.capture = cv2.VideoCapture(0)
         self.resolution = {
-            "width": 1280,
-            "height": 720,
+            "width": int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            "height": int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
             }
+        del self.capture
         self.settings = {
             "brightness": 127,
             "contrast": 127,
@@ -143,7 +145,7 @@ class Dotty_As(QMainWindow):
             "blue": 121,
             "discochaos": None,
             "dottype": "Square",
-            "fill": "Outline",
+            "fill": "Outline"
             }
         self.virtualcam_settings = {
             "virtualcam_enabled": 0, 
@@ -189,8 +191,9 @@ class Dotty_As(QMainWindow):
             )
 
     def init_settings_values(self):
-        self.settings_window.width_input.setText(str(self.resolution["width"]))
-        self.settings_window.height_input.setText(str(self.resolution["height"]))
+        self.settings_window.resolution_combobox.setCurrentText(f"{self.resolution['width']}x{self.resolution['height']}")
+        if self.get_virtual_cams()[0] == "":
+            self.settings_window.virtualcam_groupbox.setEnabled(False)
         self.settings_window.brightnessslider.setValue(self.settings["brightness"])
         self.settings_window.brightnessvalue.setText(str(self.settings["brightness"]))
         self.settings_window.contrastslider.setValue(self.settings["contrast"])
@@ -200,7 +203,6 @@ class Dotty_As(QMainWindow):
         self.settings_window.resize(400, 600)
         self.settings_window.show()
         self.settings_window.activateWindow()
-
 
 
     @pyqtSlot(np.ndarray)
@@ -239,28 +241,42 @@ class Dotty_As_Settings(QWidget):
         self.discochaos()
         self.dottype()
 
+
+    def get_supported_resolutions(self):
+        supported_resolutions = [res for res in sorted(subprocess.run(["v4l2-ctl -d /dev/video0 --list-formats-ext | grep Size"], capture_output=True, text=True, shell=True).stdout.replace("Size: Discrete ","").replace("\t", "").strip().split("\n"), key = lambda i: i.split("x")[0], reverse=True)]
+        return supported_resolutions
+
+    def get_supported_brightness_range(self):
+        supported_brightness_range = {
+            "min": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep brightness"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[1].split("=")[1]),
+            "max": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep brightness"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[2].split("=")[1])
+            }
+        return supported_brightness_range
+
+    def get_supported_contrast_range(self):
+        supported_contrast_range = {
+        "min": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep contrast"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[1].split("=")[1]),
+        "max": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep contrast"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[2].split("=")[1])
+            }
+        return supported_contrast_range
+
+
     def resolution(self):
         self.resolution_groupbox = QGroupBox("Resolution")
         self.mainlayout.addWidget(self.resolution_groupbox)
         self.resolution_layout = QHBoxLayout()
         self.resolution_groupbox.setLayout(self.resolution_layout)
-        self.width_label = QLabel("W")
-        self.width_input = QLineEdit()
-        self.width_input.setMaxLength(4)
-        self.multiplier_label = QLabel("x")
-        self.height_label = QLabel("H")
-        self.height_input = QLineEdit()
-        self.height_input.setMaxLength(4)
+        # Supported Resolutions
+        self.resolution_groupbox.setLayout(self.resolution_layout)
+        self.resolution_combobox = QComboBox()
+        self.resolution_combobox.setEditable(True)
+        self.resolution_combobox.setInsertPolicy(0)
+        if sys.platform == "linux":
+            self.resolution_combobox.addItems(self.get_supported_resolutions())
         self.set_resolution_button = QPushButton("Set")
-        self.resolution_layout.addWidget(self.width_label)
-        self.resolution_layout.addWidget(self.width_input)
-        self.resolution_layout.addWidget(self.multiplier_label)
-        self.resolution_layout.addWidget(self.height_label)
-        self.resolution_layout.addWidget(self.height_input)
+        self.resolution_layout.addWidget(self.resolution_combobox)
         self.resolution_layout.addWidget(self.set_resolution_button)
-        self.width_input.setText("1280")
-        self.height_input.setText("720")
-        self.set_resolution_button.clicked.connect(self.set_resolution)
+        self.set_resolution_button.clicked.connect(self.set_resolution)        
 
     def virtualcam(self):
         self.virtualcam_groupbox = QGroupBox("Virtual Camera")
@@ -290,8 +306,12 @@ class Dotty_As_Settings(QWidget):
         self.brightnessslider_groupbox.setLayout(self.brightnessslider_layout)
         self.brightnessvalue = QLabel()
         self.brightnessslider = QSlider(Qt.Horizontal)
-        self.brightnessslider.setMinimum(0)
-        self.brightnessslider.setMaximum(255)
+        if sys.platform == "linux":
+            self.brightnessslider.setMinimum(self.get_supported_brightness_range()["min"])
+            self.brightnessslider.setMaximum(self.get_supported_brightness_range()["max"])
+        else:
+            self.brightnessslider.setMinimum(0)
+            self.brightnessslider.setMaximum(255)
         self.brightnessslider_layout.addWidget(self.brightnessvalue)
         self.brightnessslider_layout.addWidget(self.brightnessslider)
         self.brightnessslider.sliderMoved.connect(self.set_brightness)
@@ -301,13 +321,16 @@ class Dotty_As_Settings(QWidget):
         self.mainlayout.addWidget(self.contrastslider_groupbox)
         self.contrastslider_layout = QHBoxLayout()
         self.contrastslider_groupbox.setLayout(self.contrastslider_layout)
-        self.contrastvalue = QLabel(str(127))
+        self.contrastvalue = QLabel()
         self.contrastslider = QSlider(Qt.Horizontal)
-        self.contrastslider.setMinimum(0)
-        self.contrastslider.setMaximum(255)
+        if sys.platform == "linux":
+            self.contrastslider.setMinimum(self.get_supported_contrast_range()["min"])
+            self.contrastslider.setMaximum(self.get_supported_contrast_range()["max"])
+        else:
+            self.contrastslider.setMinimum(0)
+            self.contrastslider.setMaximum(255)
         self.contrastslider_layout.addWidget(self.contrastvalue)
         self.contrastslider_layout.addWidget(self.contrastslider)
-        self.contrastslider.setValue(127)
         self.contrastslider.sliderMoved.connect(self.set_contrast)
 
     def colour(self):
@@ -410,11 +433,10 @@ class Dotty_As_Settings(QWidget):
 
     def set_resolution(self):
         new_res = {
-            "width": int(self.width_input.text()),
-            "height": int(self.height_input.text()),
+            "width": int(self.resolution_combobox.currentText().split("x")[0]),
+            "height": int(self.resolution_combobox.currentText().split("x")[1])
             }
         dotty_as.update_resolution(new_res)
-
     
     def set_virtualcamtoggle(self, button):
         if button.text() == "On":
