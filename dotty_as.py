@@ -7,8 +7,8 @@ import random
 import subprocess
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QRadioButton, QGroupBox, QComboBox, QSlider, QLineEdit, QPushButton
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QObject, QThreadPool, QRunnable
+from PyQt5.QtGui import QPixmap, QRegExpValidator
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QObject, QThreadPool, QRunnable, QRegExp
 
 class WorkerSignals(QObject):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -271,6 +271,8 @@ class Dotty_As_Settings(QWidget):
         self.resolution_combobox = QComboBox()
         self.resolution_combobox.setEditable(True)
         self.resolution_combobox.setInsertPolicy(0)
+        resolution_regexp = QRegExp("[0-9]{2,4}x[0-9]{2,4}")
+        self.resolution_validator = QRegExpValidator(resolution_regexp)
         if sys.platform == "linux":
             self.resolution_combobox.addItems(self.get_supported_resolutions())
         self.set_resolution_button = QPushButton("Set")
@@ -432,11 +434,15 @@ class Dotty_As_Settings(QWidget):
 
 
     def set_resolution(self):
-        new_res = {
-            "width": int(self.resolution_combobox.currentText().split("x")[0]),
-            "height": int(self.resolution_combobox.currentText().split("x")[1])
-            }
-        dotty_as.update_resolution(new_res)
+        if self.resolution_validator.validate(self.resolution_combobox.currentText().strip(), 0)[0] == 2: 
+            self.resolution_combobox.setCurrentText(self.resolution_combobox.currentText().strip())
+            new_res = {
+                "width": int(self.resolution_combobox.currentText().split("x")[0]),
+                "height": int(self.resolution_combobox.currentText().split("x")[1])
+                }
+            dotty_as.update_resolution(new_res)
+        else:
+            return
     
     def set_virtualcamtoggle(self, button):
         if button.text() == "On":
