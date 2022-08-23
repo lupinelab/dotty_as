@@ -243,7 +243,7 @@ class Dotty_As_Settings(QWidget):
 
 
     def get_supported_resolutions(self):
-        supported_resolutions = [res for res in sorted(subprocess.run(["v4l2-ctl -d /dev/video0 --list-formats-ext | grep Size"], capture_output=True, text=True, shell=True).stdout.replace("Size: Discrete ","").replace("\t", "").strip().split("\n"), key = lambda i: i.split("x")[0], reverse=True)]
+        supported_resolutions = [res for res in sorted(set(subprocess.run(["v4l2-ctl -d /dev/video0 --list-formats-ext | grep Size"], capture_output=True, text=True, shell=True).stdout.replace("Size: Discrete ","").replace("\t", "").strip().split("\n")), key = lambda i: i.split("x")[0], reverse=True)]
         return supported_resolutions
 
     def get_supported_brightness_range(self):
