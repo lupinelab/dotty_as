@@ -1,3 +1,4 @@
+1. Add webcam source selection (to enable usage with multiple cams and also "OBS Webcam Filter" plugin)
 2. Make compatible with Windows (virtual camera devices - Test?!)
 4. Build for Linux/Windows - https://github.com/opencv/opencv/issues/13202 & https://github.com/opencv/opencv-python
 5. OBS plugin branch?
