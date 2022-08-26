@@ -8,7 +8,7 @@ import subprocess
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QRadioButton, QGroupBox, QComboBox, QSlider, QLineEdit, QPushButton
 from PyQt5.QtGui import QPixmap, QRegExpValidator
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QObject, QThreadPool, QRunnable, QRegExp
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QObject, QThreadPool, QRunnable, QRegExp
 
 class WorkerSignals(QObject):
     change_pixmap_signal = pyqtSignal(np.ndarray)
