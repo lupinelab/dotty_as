@@ -39,7 +39,7 @@ Install virtual camera device
 
 ## Notes on virtualcam and video conferencing software
 
-Tested - Teams, Zoom, Skype
+Tested - Teams, Zoom, Skype, Discord
 
 Be sure to turn the virtual camera output on before selecting it as a device from one of the above.
 
