@@ -11,11 +11,11 @@ It also includes RGB colour control, colour randomization modes and different do
 
 ## Platform Feature Support
 
-- Linux has all features. 
+- Linux - all features. 
 
-- Windows does not have virtual camera output or camera capability detection.
+- Windows - does not have virtual camera output or camera capability detection.
 
-- Mac is untested currently.
+- Mac - currently untested.
 
 ## Installation
 
