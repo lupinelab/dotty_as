@@ -4,8 +4,8 @@ dotty_as is a camera filter that converts your webcam to dots. It makes you dott
 
 It includes some different dot types including an ASCII luminance mode.
 
-[Smaple Image](./sample%20image/sample_image.png)
-[Smaple Image - ASCII](./sample%20image/sample_image_ascii.png)
+![Sample Image](./sample%20image/sample_image.png)
+![Sample Image - ASCII](./sample%20image/sample_image_ascii.png)
 
 ## Feature Support
 
