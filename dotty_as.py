@@ -7,98 +7,106 @@ import random
 import subprocess
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QRadioButton, QGroupBox, QComboBox, QSlider, QLineEdit, QPushButton
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
+from PyQt5.QtGui import QPixmap, QRegExpValidator
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QObject, QThreadPool, QRunnable, QRegExp
 
-class VideoThread(QThread):
+class WorkerSignals(QObject):
     change_pixmap_signal = pyqtSignal(np.ndarray)
-    def __init__(self, capture, video_settings, virtualcam_settings):
-        super().__init__()
-        self._run_flag = True
-        self.capture = capture
+
+class VideoThread(QRunnable):
+    def __init__(self, run_flag, virtualcam, resolution, video_settings, virtualcam_settings):
+        super(VideoThread, self).__init__()
+        self.signals = WorkerSignals()
+        self.run_flag = run_flag
+        self.capture = cv2.VideoCapture(0)
         self.capture.set(cv2.CAP_PROP_FPS, 60)
         self.capture.set(cv2.CAP_PROP_AUTOFOCUS, 1)
-        self.capture_width = video_settings["cap_width"]
-        self.capture_height = video_settings["cap_height"]
-        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.capture_width)
-        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.capture_height)
-        self.brightness = video_settings["brightness"]
-        self.contrast = video_settings["contrast"]
-        self.red = video_settings["red"]
-        self.green = video_settings["green"]
-        self.blue = video_settings["blue"]
-        self.discochaos = video_settings["discochaos"]
-        self.dottype = video_settings["dottype"]
-        self.fill = video_settings["fill"]
-        self.virtualcam_enabled = virtualcam_settings["virtualcam_enabled"]
-        self.virtualcam_device = virtualcam_settings["virtualcam_device"]
-        self.virtualcam = None
+        self.resolution = resolution
+        self.video_settings = video_settings
+        self.video_settings["brightness"] = int(self.capture.get(cv2.CAP_PROP_BRIGHTNESS))
+        self.video_settings["contrast"] = int(self.capture.get(cv2.CAP_PROP_CONTRAST))
+        self.virtualcam_settings = virtualcam_settings
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution["width"])
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution["height"])
+        self.virtualcam = virtualcam
         self.ascii_symbols = (".", ",", "-", "~", ":", ";", "=", "!", "*", "#", "$", "@")
-        self.set_virtualcam_status()
+
+    @pyqtSlot()
+    def run(self):
+        while self.run_flag:
+            dottyFrame = np.zeros((int(self.resolution["height"]), int(self.resolution["width"]), 3), dtype=np.uint8)
+            self.capture.set(cv2.CAP_PROP_CONTRAST, self.video_settings["contrast"])
+            self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.video_settings["brightness"])
+            colour = (self.video_settings["red"], self.video_settings["green"], self.video_settings["blue"])
+            if self.video_settings["discochaos"] == "Disco":
+                colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
+            ret, frame = self.capture.read() 
+            if ret:
+                greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                dim = ((int(self.resolution["width"]/10)), (int(self.resolution["height"]/10)))
+                downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
+                x = 0
+                y = 0
+                while y < dim[1]:
+                    while x < dim[0]:
+                        if self.video_settings["discochaos"] == "Chaos":
+                             colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
+                        if self.video_settings["dottype"] == "Square":
+                            self.square(y, x, downFrame, dottyFrame, colour, self.video_settings["fill"])
+                        elif self.video_settings["dottype"] == "Circle":
+                            self.circle(y, x, downFrame, dottyFrame, colour, self.video_settings["fill"])
+                        elif self.video_settings["dottype"] == "ASCII":
+                            self.ascii(y, x, downFrame, dottyFrame, colour)
+                        x += 1
+                    x = 0
+                    y += 1
+            if self.virtualcam_settings["virtualcam_enabled"] == 1:
+                self.set_virtualcam()
+                self.virtualcam.send(dottyFrame)
+                self.virtualcam.sleep_until_next_frame()
+            self.signals.change_pixmap_signal.emit(dottyFrame)
+        self.capture.release()
 
 
-    @pyqtSlot(dict)
-    def update_image_settings(self, settings):
-        self.brightness = settings["brightness"]
-        self.contrast = settings["contrast"]
-        self.red = settings["red"]
-        self.green = settings["green"]
-        self.blue = settings["blue"]
-        self.discochaos = settings["discochaos"]
-        self.dottype = settings["dottype"]
-        self.fill = settings["fill"]
-    
-    @pyqtSlot(dict)
-    def update_virtualcam_settings(self, settings):
-        self.virtualcam_enabled = settings["virtualcam_enabled"]
-        self.virtualcam_device = settings["virtualcam_device"]
-        self.set_virtualcam_status()
-
-    @pyqtSlot(dict)
-    def update_resolution(self, resolution):
-        self.capture_width = resolution["width"]
-        self.capture_height = resolution["height"]
-        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.capture_width)
-        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.capture_height)
-
-
-    def set_virtualcam_status(self):
-        if self.virtualcam_enabled == 1:
-            try:
+    def set_virtualcam(self):
+        if self.virtualcam == None:    
                 self.virtualcam = pyvirtualcam.Camera(
-                        int(self.capture_width), 
-                        int(self.capture_height),
+                        int(self.resolution["width"]), 
+                        int(self.resolution["height"]),
                         fps=self.capture.get(cv2.CAP_PROP_FPS),
-                        device=self.virtualcam_device
+                        device=self.virtualcam_settings["virtualcam_device"]
                         )
-            except RuntimeError:
-                self.virtualcam_enabled = 0
-        elif self.virtualcam_enabled == 0:
-            try:
-                del self.virtualcam
-            except AttributeError:
-                pass
+        elif self.virtualcam.device != self.virtualcam_settings["virtualcam_device"]:
+                self.virtualcam = pyvirtualcam.Camera(
+                        int(self.resolution["width"]), 
+                        int(self.resolution["height"]),
+                        fps=self.capture.get(cv2.CAP_PROP_FPS),
+                        device=self.virtualcam_settings["virtualcam_device"]
+                        )
+        elif self.virtualcam_settings["virtualcam_enabled"]== 0:
+                self.virtualcam = None
+
 
     def square(self, y, x, frame, canvas, colour, fill):
         rect_size = (frame[y, x])//32
         rect_start = ((x*10)+2, (y*10)+2)
         rect_end = ((x*10)+(rect_size), (y*10)+(rect_size))
-        if fill == "Outline":
+        if self.video_settings["fill"] == "Outline":
             effect = cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
-        elif fill == "Filled":
+        elif self.video_settings["fill"] == "Filled":
             effect = cv2.rectangle(canvas, rect_start, rect_end, colour, -1)
 
 
     def circle(self, y, x, frame, canvas, colour, fill):
         radius = int(((frame[y, x])//32)/2)
         centre = ((x*10)+4, (y*10)+4)
-        if fill == "Outline":
+        if self.video_settings["fill"] == "Outline":
             if radius == 1:
                 rect_start = ((x*10)+4, (y*10)+4)
                 rect_end = ((x*10)+4, (y*10)+4)
                 cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
             cv2.circle(canvas, centre, radius, colour, 1, cv2.LINE_AA)
-        elif fill == "Filled":
+        elif self.video_settings["fill"] == "Filled":
             if radius == 1:
                 rect_start = ((x*10)+4, (y*10)+4)
                 rect_end = ((x*10)+4, (y*10)+4)
@@ -112,56 +120,24 @@ class VideoThread(QThread):
         effect = cv2.putText(canvas, symbol, bottom_left, cv2.FONT_HERSHEY_PLAIN, .6, colour, 1, cv2.LINE_AA)
 
 
-    def run(self):
-        while self._run_flag:
-            dottyFrame = np.zeros((int(self.capture_height), int(self.capture_width), 3), dtype=np.uint8)
-            self.capture.set(cv2.CAP_PROP_CONTRAST, self.contrast)
-            self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.brightness)
-            colour = (self.red, self.green, self.blue)
-            if self.discochaos == "Disco":
-                colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
-            ret, frame = self.capture.read() 
-            if ret:
-                greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                dim = ((int(self.capture_width/10)), (int(self.capture_height/10)))
-                downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
-                x = 0
-                y = 0
-                while y < dim[1]:
-                    while x < dim[0]:
-                        if self.discochaos == "Chaos":
-                             colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
-                        if self.dottype == "Square":
-                            self.square(y, x, downFrame, dottyFrame, colour, self.fill)
-                        elif self.dottype == "Circle":
-                            self.circle(y, x, downFrame, dottyFrame, colour, self.fill)
-                        elif self.dottype == "ASCII":
-                            self.ascii(y, x, downFrame, dottyFrame, colour)
-                        x += 1
-                    x = 0
-                    y += 1
-            if self.virtualcam_enabled == 1:
-                self.virtualcam.send(dottyFrame)
-                self.virtualcam.sleep_until_next_frame()
-            self.change_pixmap_signal.emit(dottyFrame)
-        self.capture.release()
-
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
-        self._run_flag = False
-        self.wait()
+        self.run_flag = False
 
 class Dotty_As(QMainWindow):
-    update_settings_signal = pyqtSignal(dict)
-    update_virtualcam_signal = pyqtSignal(dict)
-    update_resolution_signal = pyqtSignal(dict)
     def __init__(self):
         super().__init__()
+        self.signals = WorkerSignals()
         self.setWindowTitle("dotty_as")
+        self.dotify_run_flag = True
+        self.virtualcam = None
         self.capture = cv2.VideoCapture(0)
+        self.resolution = {
+            "width": int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            "height": int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            }
+        del self.capture
         self.settings = {
-            "cap_width": self.capture.get(cv2.CAP_PROP_FRAME_WIDTH),
-            "cap_height": self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT),
             "brightness": 127,
             "contrast": 127,
             "red": 13,
@@ -169,55 +145,65 @@ class Dotty_As(QMainWindow):
             "blue": 121,
             "discochaos": None,
             "dottype": "Square",
-            "fill": "Outline",
+            "fill": "Outline"
             }
         self.virtualcam_settings = {
             "virtualcam_enabled": 0, 
             "virtualcam_device": str(self.get_virtual_cams()[0])
             }
-        self.thread = VideoThread(capture=self.capture, video_settings=self.settings, virtualcam_settings=self.virtualcam_settings)
-        self.update_settings_signal.connect(self.thread.update_image_settings)
-        self.update_virtualcam_signal.connect(self.thread.update_virtualcam_settings)
-        self.update_resolution_signal.connect(self.thread.update_resolution)
-        self.thread.change_pixmap_signal.connect(self.update_image)
-        self.thread.start()
-        self.resize_preview()
+        self.threadpool = QThreadPool()
+        self.threadpool.setExpiryTimeout(100)
+        self.start_dotifying()
+        self.resize_window()
         self.preview = QLabel(self)
         self.preview.mousePressEvent = self.show_settings
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.preview)
+        self.show()
         self.settings_window = Dotty_As_Settings()
         self.init_settings_values()
         self.settings_window.show()
 
+
+    def update_resolution(self, new_res):
+        self.dotify.stop()
+        self.threadpool.waitForDone()
+        self.resolution = new_res
+        self.start_dotifying()
+        self.resize_window()
+
+    def start_dotifying(self):
+        self.dotify = VideoThread(run_flag=self.dotify_run_flag, virtualcam=self.virtualcam, resolution=self.resolution, video_settings=self.settings, virtualcam_settings=self.virtualcam_settings)
+        self.dotify.setAutoDelete(True)
+        self.dotify.signals.change_pixmap_signal.connect(self.update_image)
+        self.threadpool.start(self.dotify)
+
     def closeEvent(self, event):
+        self.dotify.stop()
+        self.threadpool.waitForDone()
         self.settings_window.close()
-        self.thread.stop()
         event.accept()
 
-    def resize_preview(self):
+    def resize_window(self):
         self.resize(
-            int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
-            int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.resolution["width"],
+            self.resolution["height"]
             )
 
     def init_settings_values(self):
-        self.settings_window.width_input.setText(str(int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH))))
-        self.settings_window.height_input.setText(str(int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))))
-        self.settings_window.brightnessslider.setValue(int(self.capture.get(cv2.CAP_PROP_BRIGHTNESS)))
-        self.settings_window.brightnessvalue.setText(str(self.settings_window.brightnessslider.sliderPosition()))
-        self.settings_window.contrastslider.setValue(int(self.capture.get(cv2.CAP_PROP_CONTRAST)))
-        self.settings_window.contrastvalue.setText(str(self.settings_window.contrastslider.sliderPosition()))
+        self.settings_window.resolution_combobox.setCurrentText(f"{self.resolution['width']}x{self.resolution['height']}")
+        if self.get_virtual_cams()[0] == "":
+            self.settings_window.virtualcam_groupbox.setEnabled(False)
+        self.settings_window.brightnessslider.setValue(self.settings["brightness"])
+        self.settings_window.brightnessvalue.setText(str(self.settings["brightness"]))
+        self.settings_window.contrastslider.setValue(self.settings["contrast"])
+        self.settings_window.contrastvalue.setText(str(self.settings["contrast"]))
 
     def show_settings(self, event):
         self.settings_window.resize(400, 600)
         self.settings_window.show()
+        self.settings_window.activateWindow()
 
-    def update_settings(self):
-        self.update_settings_signal.emit(self.settings)
-
-    def update_virtualcam_settings(self):
-        self.update_virtualcam_signal.emit(self.virtualcam_settings)
 
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_frame):
@@ -234,9 +220,11 @@ class Dotty_As(QMainWindow):
         p = convert_to_Qt_format.scaled(self.width(), self.height(), Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
+
     def get_virtual_cams(self):
         virtual_cams = subprocess.run(["v4l2-ctl --list-devices | grep -A1 v4l2 | grep /dev/video"], capture_output=True, text=True, shell=True).stdout.strip().replace("\t", "").split("\n")
         return virtual_cams
+
 
 class Dotty_As_Settings(QWidget):
     def __init__(self):
@@ -253,28 +241,44 @@ class Dotty_As_Settings(QWidget):
         self.discochaos()
         self.dottype()
 
+
+    def get_supported_resolutions(self):
+        supported_resolutions = [res for res in sorted(set(subprocess.run(["v4l2-ctl -d /dev/video0 --list-formats-ext | grep Size"], capture_output=True, text=True, shell=True).stdout.replace("Size: Discrete ","").replace("\t", "").strip().split("\n")), key = lambda i: i.split("x")[0], reverse=True)]
+        return supported_resolutions
+
+    def get_supported_brightness_range(self):
+        supported_brightness_range = {
+            "min": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep brightness"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[1].split("=")[1]),
+            "max": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep brightness"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[2].split("=")[1])
+            }
+        return supported_brightness_range
+
+    def get_supported_contrast_range(self):
+        supported_contrast_range = {
+        "min": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep contrast"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[1].split("=")[1]),
+        "max": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep contrast"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[2].split("=")[1])
+            }
+        return supported_contrast_range
+
+
     def resolution(self):
         self.resolution_groupbox = QGroupBox("Resolution")
         self.mainlayout.addWidget(self.resolution_groupbox)
         self.resolution_layout = QHBoxLayout()
         self.resolution_groupbox.setLayout(self.resolution_layout)
-        self.width_label = QLabel("W")
-        self.width_input = QLineEdit()
-        self.width_input.setMaxLength(4)
-        self.multiplier_label = QLabel("x")
-        self.height_label = QLabel("H")
-        self.height_input = QLineEdit()
-        self.height_input.setMaxLength(4)
+        # Supported Resolutions
+        self.resolution_groupbox.setLayout(self.resolution_layout)
+        self.resolution_combobox = QComboBox()
+        self.resolution_combobox.setEditable(True)
+        self.resolution_combobox.setInsertPolicy(0)
+        resolution_regexp = QRegExp("[0-9]{2,4}x[0-9]{2,4}")
+        self.resolution_validator = QRegExpValidator(resolution_regexp)
+        if sys.platform == "linux":
+            self.resolution_combobox.addItems(self.get_supported_resolutions())
         self.set_resolution_button = QPushButton("Set")
-        self.resolution_layout.addWidget(self.width_label)
-        self.resolution_layout.addWidget(self.width_input)
-        self.resolution_layout.addWidget(self.multiplier_label)
-        self.resolution_layout.addWidget(self.height_label)
-        self.resolution_layout.addWidget(self.height_input)
+        self.resolution_layout.addWidget(self.resolution_combobox)
         self.resolution_layout.addWidget(self.set_resolution_button)
-        self.width_input.setText("1280")
-        self.height_input.setText("720")
-        self.set_resolution_button.clicked.connect(self.set_resolution)
+        self.set_resolution_button.clicked.connect(self.set_resolution)        
 
     def virtualcam(self):
         self.virtualcam_groupbox = QGroupBox("Virtual Camera")
@@ -304,8 +308,12 @@ class Dotty_As_Settings(QWidget):
         self.brightnessslider_groupbox.setLayout(self.brightnessslider_layout)
         self.brightnessvalue = QLabel()
         self.brightnessslider = QSlider(Qt.Horizontal)
-        self.brightnessslider.setMinimum(0)
-        self.brightnessslider.setMaximum(255)
+        if sys.platform == "linux":
+            self.brightnessslider.setMinimum(self.get_supported_brightness_range()["min"])
+            self.brightnessslider.setMaximum(self.get_supported_brightness_range()["max"])
+        else:
+            self.brightnessslider.setMinimum(0)
+            self.brightnessslider.setMaximum(255)
         self.brightnessslider_layout.addWidget(self.brightnessvalue)
         self.brightnessslider_layout.addWidget(self.brightnessslider)
         self.brightnessslider.sliderMoved.connect(self.set_brightness)
@@ -315,13 +323,16 @@ class Dotty_As_Settings(QWidget):
         self.mainlayout.addWidget(self.contrastslider_groupbox)
         self.contrastslider_layout = QHBoxLayout()
         self.contrastslider_groupbox.setLayout(self.contrastslider_layout)
-        self.contrastvalue = QLabel(str(127))
+        self.contrastvalue = QLabel()
         self.contrastslider = QSlider(Qt.Horizontal)
-        self.contrastslider.setMinimum(0)
-        self.contrastslider.setMaximum(255)
+        if sys.platform == "linux":
+            self.contrastslider.setMinimum(self.get_supported_contrast_range()["min"])
+            self.contrastslider.setMaximum(self.get_supported_contrast_range()["max"])
+        else:
+            self.contrastslider.setMinimum(0)
+            self.contrastslider.setMaximum(255)
         self.contrastslider_layout.addWidget(self.contrastvalue)
         self.contrastslider_layout.addWidget(self.contrastslider)
-        self.contrastslider.setValue(127)
         self.contrastslider.sliderMoved.connect(self.set_contrast)
 
     def colour(self):
@@ -421,48 +432,48 @@ class Dotty_As_Settings(QWidget):
         self.dotfill_filled.clicked.connect(lambda:self.set_dotfill(self.dotfill_filled))
         self.dotfill_outline.clicked.connect(lambda:self.set_dotfill(self.dotfill_outline))
 
+
     def set_resolution(self):
-        resolution = {}
-        resolution["width"] = int(self.width_input.text())
-        resolution["height"] = int(self.height_input.text())
-        dotty_as.update_resolution_signal.emit(resolution)
-        dotty_as.resize_preview()
+        if self.resolution_validator.validate(self.resolution_combobox.currentText().strip(), 0)[0] == 2: 
+            self.resolution_combobox.setCurrentText(self.resolution_combobox.currentText().strip())
+            new_res = {
+                "width": int(self.resolution_combobox.currentText().split("x")[0]),
+                "height": int(self.resolution_combobox.currentText().split("x")[1])
+                }
+            dotty_as.update_resolution(new_res)
+        else:
+            return
     
     def set_virtualcamtoggle(self, button):
         if button.text() == "On":
+            self.resolution_groupbox.setEnabled(False)
             dotty_as.virtualcam_settings["virtualcam_enabled"] = 1
         if button.text() == "Off":
+            self.resolution_groupbox.setEnabled(True)
             dotty_as.virtualcam_settings["virtualcam_enabled"] = 0
-        dotty_as.update_virtualcam_settings()
 
     def set_virtualcamselect(self):
         dotty_as.virtualcam_settings["virtualcam_device"] = self.virtualcamselect_combobox.currentText()
-        dotty_as.update_virtualcam_settings()
 
     def set_brightness(self):
         self.brightnessvalue.setText(str(self.brightnessslider.value()))
         dotty_as.settings["brightness"] = self.brightnessslider.value()
-        dotty_as.update_settings()
 
     def set_contrast(self):
         self.contrastvalue.setText(str(self.contrastslider.value()))
         dotty_as.settings["contrast"] = self.contrastslider.value()
-        dotty_as.update_settings()
 
     def set_red(self):
         self.redvalue.setText(str(self.redslider.value()))
         dotty_as.settings["red"] = self.redslider.value()
-        dotty_as.update_settings()
     
     def set_green(self):
         self.greenvalue.setText(str(self.greenslider.value()))
         dotty_as.settings["green"] = self.greenslider.value()
-        dotty_as.update_settings()
 
     def set_blue(self):
         self.bluevalue.setText(str(self.blueslider.value()))
         dotty_as.settings["blue"] = self.blueslider.value()
-        dotty_as.update_settings()
 
     def set_discochaos_checkbox(self, checkbox):
         if checkbox.isChecked():
@@ -474,7 +485,6 @@ class Dotty_As_Settings(QWidget):
                 dotty_as.settings["discochaos"] = self.discochaos_chaos.text()
             if self.discochaos_disco.isChecked():
                 dotty_as.settings["discochaos"] = self.discochaos_disco.text()
-        dotty_as.update_settings()
 
     def set_colour_checkbox(self, checkbox):
         if checkbox.isChecked():
@@ -486,23 +496,19 @@ class Dotty_As_Settings(QWidget):
         if checkbox.isChecked() == False:
             dotty_as.settings["discochaos"] = None
             self.colourslider_groupbox.setChecked(True)
-        dotty_as.update_settings()
 
     def set_discochaos(self, button):
         dotty_as.settings["discochaos"] = button.text()
-        dotty_as.update_settings()
 
     def set_dotshape(self, button):
         dotty_as.settings["dottype"] = button.text()
         if button.text() == "ASCII":
-            self.dotfill_groupbox.setChecked(False)
+            self.dotfill_groupbox.setEnabled(False)
         if button.text() != "ASCII":
-            self.dotfill_groupbox.setChecked(True)
-        dotty_as.update_settings()
+            self.dotfill_groupbox.setEnabled(True)
     
     def set_dotfill(self, button):
         dotty_as.settings["fill"] = button.text()
-        dotty_as.update_settings()
 
     def get_virtual_cams(self):
         virtual_cams = subprocess.run(["v4l2-ctl --list-devices | grep -A1 v4l2 | grep /dev/video"], capture_output=True, text=True, shell=True).stdout.strip().replace("\t", "").split("\n")
@@ -512,8 +518,4 @@ class Dotty_As_Settings(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     dotty_as = Dotty_As()
-    dotty_as.show()
     sys.exit(app.exec_())
-    
-    
-    
