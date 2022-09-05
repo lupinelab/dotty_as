@@ -44,11 +44,6 @@ class VideoThread(QRunnable):
             if ret:
                 greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 dim = ((int(self.resolution["width"]/10)), (int(self.resolution["height"]/10)))
-                downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
-                # x = 0
-                # y = 0
-                # while y < dim[1]:
-                #     while x < dim[0]:
                 for coord, pixelvalue in np.ndenumerate(downFrame):
                         if self.video_settings["discochaos"] == "Chaos":
                              colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
@@ -58,9 +53,6 @@ class VideoThread(QRunnable):
                             self.circle(coord[1], coord[0], pixelvalue, dottyFrame, colour, self.video_settings["fill"])
                         elif self.video_settings["dottype"] == "ASCII":
                             self.ascii(coord[1], coord[0], pixelvalue, dottyFrame, colour)
-                    #     x += 1
-                    # x = 0
-                    # y += 1
             if self.virtualcam_settings["virtualcam_enabled"] == 1:
                 self.set_virtualcam()
                 self.virtualcam.send(dottyFrame)
