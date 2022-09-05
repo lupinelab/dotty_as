@@ -110,8 +110,8 @@ class VideoThread(QRunnable):
 
     def ascii(self, x, y, pixelvalue, canvas, colour):
         symbol = self.ascii_symbols[(pixelvalue)//22]
-        bottom_left = ((x*10)+2, (y*10)+8)
-        effect = cv2.putText(canvas, symbol, bottom_left, cv2.FONT_HERSHEY_PLAIN, .6, colour, 1, cv2.LINE_AA)
+        bottom_left = ((x*10)+1, (y*10)+9)
+        effect = cv2.putText(canvas, symbol, bottom_left, cv2.FONT_HERSHEY_PLAIN, .7, colour, 1, cv2.LINE_AA)
 
 
     def stop(self):
