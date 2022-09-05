@@ -45,21 +45,22 @@ class VideoThread(QRunnable):
                 greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 dim = ((int(self.resolution["width"]/10)), (int(self.resolution["height"]/10)))
                 downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
-                x = 0
-                y = 0
-                while y < dim[1]:
-                    while x < dim[0]:
+                # x = 0
+                # y = 0
+                # while y < dim[1]:
+                #     while x < dim[0]:
+                for coord, pixelvalue in np.ndenumerate(downFrame):
                         if self.video_settings["discochaos"] == "Chaos":
                              colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
                         if self.video_settings["dottype"] == "Square":
-                            self.square(y, x, downFrame, dottyFrame, colour, self.video_settings["fill"])
+                            self.square(coord[1], coord[0], pixelvalue, dottyFrame, colour, self.video_settings["fill"])
                         elif self.video_settings["dottype"] == "Circle":
-                            self.circle(y, x, downFrame, dottyFrame, colour, self.video_settings["fill"])
+                            self.circle(coord[1], coord[0], pixelvalue, dottyFrame, colour, self.video_settings["fill"])
                         elif self.video_settings["dottype"] == "ASCII":
-                            self.ascii(y, x, downFrame, dottyFrame, colour)
-                        x += 1
-                    x = 0
-                    y += 1
+                            self.ascii(coord[1], coord[0], pixelvalue, dottyFrame, colour)
+                    #     x += 1
+                    # x = 0
+                    # y += 1
             if self.virtualcam_settings["virtualcam_enabled"] == 1:
                 self.set_virtualcam()
                 self.virtualcam.send(dottyFrame)
@@ -87,8 +88,8 @@ class VideoThread(QRunnable):
                 self.virtualcam = None
 
 
-    def square(self, y, x, frame, canvas, colour, fill):
-        rect_size = (frame[y, x])//32
+    def square(self, x, y, pixelvalue, canvas, colour, fill):
+        rect_size = (pixelvalue)//32
         rect_start = ((x*10)+2, (y*10)+2)
         rect_end = ((x*10)+(rect_size), (y*10)+(rect_size))
         if self.video_settings["fill"] == "Outline":
@@ -97,8 +98,8 @@ class VideoThread(QRunnable):
             effect = cv2.rectangle(canvas, rect_start, rect_end, colour, -1)
 
 
-    def circle(self, y, x, frame, canvas, colour, fill):
-        radius = int(((frame[y, x])//32)/2)
+    def circle(self, x, y, pixelvalue, canvas, colour, fill):
+        radius = int(((pixelvalue)//32)/2)
         centre = ((x*10)+4, (y*10)+4)
         if self.video_settings["fill"] == "Outline":
             if radius == 1:
@@ -114,8 +115,8 @@ class VideoThread(QRunnable):
             cv2.circle(canvas, centre, radius, colour, -1, cv2.LINE_AA)
 
 
-    def ascii(self, y, x, frame, canvas, colour):
-        symbol = self.ascii_symbols[(frame[y, x])//22]
+    def ascii(self, x, y, pixelvalue, canvas, colour):
+        symbol = self.ascii_symbols[(pixelvalue)//22]
         bottom_left = ((x*10)+2, (y*10)+8)
         effect = cv2.putText(canvas, symbol, bottom_left, cv2.FONT_HERSHEY_PLAIN, .6, colour, 1, cv2.LINE_AA)
 
@@ -273,7 +274,7 @@ class Dotty_As_Settings(QWidget):
         self.resolution_combobox.setInsertPolicy(0)
         resolution_regexp = QRegExp("[0-9]{2,4}x[0-9]{2,4}")
         self.resolution_validator = QRegExpValidator(resolution_regexp)
-        if sys.platform == "linux":
+        if sys.platform == "linux": 
             self.resolution_combobox.addItems(self.get_supported_resolutions())
         self.set_resolution_button = QPushButton("Set")
         self.resolution_layout.addWidget(self.resolution_combobox)
