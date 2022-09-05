@@ -44,6 +44,7 @@ class VideoThread(QRunnable):
             if ret:
                 greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 dim = ((int(self.resolution["width"]/10)), (int(self.resolution["height"]/10)))
+                downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
                 for coord, pixelvalue in np.ndenumerate(downFrame):
                         if self.video_settings["discochaos"] == "Chaos":
                              colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
