@@ -10,8 +10,10 @@ from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QLabel, QVBoxLay
 from PyQt5.QtGui import QPixmap, QRegExpValidator
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QObject, QThreadPool, QRunnable, QRegExp
 
+
 class WorkerSignals(QObject):
     change_pixmap_signal = pyqtSignal(np.ndarray)
+
 
 class VideoThread(QRunnable):
     def __init__(self, run_flag, virtualcam, resolution, video_settings, virtualcam_settings):
@@ -61,7 +63,6 @@ class VideoThread(QRunnable):
             self.signals.change_pixmap_signal.emit(dottyFrame)
         self.capture.release()
 
-
     def set_virtualcam(self):
         if self.virtualcam == None:    
                 self.virtualcam = pyvirtualcam.Camera(
@@ -77,9 +78,8 @@ class VideoThread(QRunnable):
                         fps=self.capture.get(cv2.CAP_PROP_FPS),
                         device=self.virtualcam_settings["virtualcam_device"]
                         )
-        elif self.virtualcam_settings["virtualcam_enabled"]== 0:
+        elif self.virtualcam_settings["virtualcam_enabled"] == 0:
                 self.virtualcam = None
-
 
     def square(self, x, y, pixelvalue, canvas, colour, fill):
         rect_size = (pixelvalue)//32
@@ -89,7 +89,6 @@ class VideoThread(QRunnable):
             effect = cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
         elif self.video_settings["fill"] == "Filled":
             effect = cv2.rectangle(canvas, rect_start, rect_end, colour, -1)
-
 
     def circle(self, x, y, pixelvalue, canvas, colour, fill):
         radius = int(((pixelvalue)//32)/2)
@@ -107,12 +106,10 @@ class VideoThread(QRunnable):
                 cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
             cv2.circle(canvas, centre, radius, colour, -1, cv2.LINE_AA)
 
-
     def ascii(self, x, y, pixelvalue, canvas, colour):
         symbol = self.ascii_symbols[(pixelvalue)//22]
         bottom_left = ((x*10)+1, (y*10)+9)
         effect = cv2.putText(canvas, symbol, bottom_left, cv2.FONT_HERSHEY_PLAIN, .7, colour, 1, cv2.LINE_AA)
-
 
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
@@ -158,7 +155,6 @@ class Dotty_As(QMainWindow):
         self.init_settings_values()
         self.settings_window.show()
 
-
     def update_resolution(self, new_res):
         self.dotify.stop()
         self.threadpool.waitForDone()
@@ -198,7 +194,6 @@ class Dotty_As(QMainWindow):
         self.settings_window.show()
         self.settings_window.activateWindow()
 
-
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_frame):
         """Updates the image_label with a new opencv image"""
@@ -213,7 +208,6 @@ class Dotty_As(QMainWindow):
         convert_to_Qt_format = QtGui.QImage(cv_frame.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(self.width(), self.height(), Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
-
 
     def get_virtual_cams(self):
         virtual_cams = subprocess.run(["v4l2-ctl --list-devices | grep -A1 v4l2 | grep /dev/video"], capture_output=True, text=True, shell=True).stdout.strip().replace("\t", "").split("\n")
@@ -235,7 +229,6 @@ class Dotty_As_Settings(QWidget):
         self.discochaos()
         self.dottype()
 
-
     def get_supported_resolutions(self):
         supported_resolutions = [res for res in sorted(set(subprocess.run(["v4l2-ctl -d /dev/video0 --list-formats-ext | grep Size"], capture_output=True, text=True, shell=True).stdout.replace("Size: Discrete ","").replace("\t", "").strip().split("\n")), key = lambda i: i.split("x")[0], reverse=True)]
         return supported_resolutions
@@ -244,16 +237,15 @@ class Dotty_As_Settings(QWidget):
         supported_brightness_range = {
             "min": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep brightness"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[1].split("=")[1]),
             "max": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep brightness"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[2].split("=")[1])
-            }
+        }
         return supported_brightness_range
 
     def get_supported_contrast_range(self):
         supported_contrast_range = {
-        "min": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep contrast"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[1].split("=")[1]),
-        "max": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep contrast"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[2].split("=")[1])
+            "min": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep contrast"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[1].split("=")[1]),
+            "max": int(subprocess.run(["v4l2-ctl -d /dev/video0 --list-ctrls | grep contrast"], capture_output=True, text=True, shell=True).stdout.split(":")[1].split(" ")[2].split("=")[1])
             }
         return supported_contrast_range
-
 
     def resolution(self):
         self.resolution_groupbox = QGroupBox("Resolution")
@@ -425,7 +417,6 @@ class Dotty_As_Settings(QWidget):
         self.dotfill_layout.addWidget(self.dotfill_outline)
         self.dotfill_filled.clicked.connect(lambda:self.set_dotfill(self.dotfill_filled))
         self.dotfill_outline.clicked.connect(lambda:self.set_dotfill(self.dotfill_outline))
-
 
     def set_resolution(self):
         if self.resolution_validator.validate(self.resolution_combobox.currentText().strip(), 0)[0] == 2: 
