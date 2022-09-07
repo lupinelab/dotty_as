@@ -83,8 +83,8 @@ class VideoThread(QRunnable):
 
     def square(self, x, y, pixelvalue, canvas, colour, fill):
         rect_size = (pixelvalue)//32
-        rect_start = ((x*10)+2, (y*10)+2)
-        rect_end = ((x*10)+(rect_size), (y*10)+(rect_size))
+        rect_start = ((x*10)+1, (y*10)+1)
+        rect_end = ((x*10)+1+(rect_size), (y*10)+1+(rect_size))
         if self.video_settings["fill"] == "Outline":
             effect = cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
         elif self.video_settings["fill"] == "Filled":
@@ -94,13 +94,13 @@ class VideoThread(QRunnable):
         radius = int(((pixelvalue)//32)/2)
         centre = ((x*10)+4, (y*10)+4)
         if self.video_settings["fill"] == "Outline":
-            if radius == 1:
+            if radius == 0:
                 rect_start = ((x*10)+4, (y*10)+4)
                 rect_end = ((x*10)+4, (y*10)+4)
                 cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
             cv2.circle(canvas, centre, radius, colour, 1, cv2.LINE_AA)
         elif self.video_settings["fill"] == "Filled":
-            if radius == 1:
+            if radius == 0:
                 rect_start = ((x*10)+4, (y*10)+4)
                 rect_end = ((x*10)+4, (y*10)+4)
                 cv2.rectangle(canvas, rect_start, rect_end, colour, 1)
