@@ -1,12 +1,11 @@
 package main
 
 import (
+	"gocv.io/x/gocv"
 	"image"
 	"image/color"
 	"strconv"
 	"time"
-
-	"gocv.io/x/gocv"
 )
 
 func main() {
