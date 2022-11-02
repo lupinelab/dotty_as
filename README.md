@@ -23,7 +23,7 @@ It also includes RGB colour control, colour randomization modes and different do
 
 `pip install pyqt5 opencv-python-headless pyvirtualcam`
 
-### Linux(Ubuntu)
+### Linux - Ubuntu (Optional)
 
 Install packages for camera capability detection and virtual camera output
 
