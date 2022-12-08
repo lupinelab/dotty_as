@@ -35,33 +35,45 @@ class VideoThread(QRunnable):
 
     @pyqtSlot()
     def run(self):
+        self.prev_frame_time = 0
+        self.new_frame_time = 0
         while self.run_flag:
-            dottyFrame = np.zeros((int(self.resolution["height"]), int(self.resolution["width"]), 3), dtype=np.uint8)
             self.capture.set(cv2.CAP_PROP_CONTRAST, self.video_settings["contrast"])
-            self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.video_settings["brightness"])
-            colour = (self.video_settings["red"], self.video_settings["green"], self.video_settings["blue"])
-            if self.video_settings["discochaos"] == "Disco":
-                colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
+            self.capture.set(cv2.CAP_PROP_BRIGHTNESS, self.video_settings["brightness"])  
             ret, frame = self.capture.read() 
             if ret:
-                greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                dim = ((int(self.resolution["width"]/10)), (int(self.resolution["height"]/10)))
-                downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
-                for coord, pixelvalue in np.ndenumerate(downFrame):
-                        if self.video_settings["discochaos"] == "Chaos":
-                             colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
-                        if self.video_settings["dottype"] == "Square":
-                            self.square(coord[1], coord[0], pixelvalue, dottyFrame, colour, self.video_settings["fill"])
-                        elif self.video_settings["dottype"] == "Circle":
-                            self.circle(coord[1], coord[0], pixelvalue, dottyFrame, colour, self.video_settings["fill"])
-                        elif self.video_settings["dottype"] == "ASCII":
-                            self.ascii(coord[1], coord[0], pixelvalue, dottyFrame, colour)
-            if self.virtualcam_settings["virtualcam_enabled"] == 1:
-                self.set_virtualcam()
-                self.virtualcam.send(dottyFrame)
-                self.virtualcam.sleep_until_next_frame()
-            self.signals.change_pixmap_signal.emit(dottyFrame)
+                self.dotit(frame)
         self.capture.release()
+
+    def dotit(self, frame):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        dottyFrame = np.zeros((int(self.resolution["height"]), int(self.resolution["width"]), 3), dtype=np.uint8)
+        colour = (self.video_settings["red"], self.video_settings["green"], self.video_settings["blue"])
+        if self.video_settings["discochaos"] == "Disco":
+            colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
+        greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        dim = ((int(self.resolution["width"]/10)), (int(self.resolution["height"]/10)))
+        downFrame = cv2.resize(greyFrame, dim, interpolation=cv2.INTER_AREA)
+        for coord, pixelvalue in np.ndenumerate(downFrame):
+                if self.video_settings["discochaos"] == "Chaos":
+                        colour = (random.randint(0, 255), random.randint(0, 255) ,random.randint(0, 255))
+                if self.video_settings["dottype"] == "Square":
+                    self.square(coord[1], coord[0], pixelvalue, dottyFrame, colour, self.video_settings["fill"])
+                elif self.video_settings["dottype"] == "Circle":
+                    self.circle(coord[1], coord[0], pixelvalue, dottyFrame, colour, self.video_settings["fill"])
+                elif self.video_settings["dottype"] == "ASCII":
+                    self.ascii(coord[1], coord[0], pixelvalue, dottyFrame, colour)
+        self.new_frame_time = time.time()
+        fps = int(1/(self.new_frame_time-self.prev_frame_time))
+        self.prev_frame_time = self.new_frame_time
+        # canvas, symbol, bottom_left, cv2.FONT_HERSHEY_PLAIN, .7, colour, 1, cv2.LINE_AA
+        cv2.putText(dottyFrame, str(fps), (7, 70), font, 2, colour, 1, cv2.LINE_AA)
+        if self.virtualcam_settings["virtualcam_enabled"] == 1:
+            self.set_virtualcam()
+            self.virtualcam.send(dottyFrame)
+            self.virtualcam.sleep_until_next_frame()
+        self.signals.change_pixmap_signal.emit(dottyFrame)
+        
 
     def set_virtualcam(self):
         if self.virtualcam == None:    
